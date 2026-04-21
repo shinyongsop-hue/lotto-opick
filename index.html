@@ -103,74 +103,18 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 .rank-3{background:#CD7F32;color:#fff}
 .rank-4{background:#4a90e2;color:#fff}
 .rank-5{background:#7dff8a;color:#111}
-.badge-tooltip{
-position:absolute;
-bottom:calc(100% + 8px);
-left:50%;
-transform:translateX(-50%);
-background:#111;
-color:#fff;
-padding:8px 10px;
-border-radius:8px;
-font-size:11px;
-line-height:1.4;
-white-space:nowrap;
-box-shadow:0 4px 12px rgba(0,0,0,0.35);
-opacity:0;
-pointer-events:none;
-transition:opacity .2s ease,transform .2s ease;
-z-index:1000;
-}
-.badge-tooltip::after{
-content:"";
-position:absolute;
-top:100%;
-left:50%;
-transform:translateX(-50%);
-border-width:6px;
-border-style:solid;
-border-color:#111 transparent transparent transparent;
-}
+.badge-tooltip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.4;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.35);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:100;max-width:min(260px,calc(100vw - 32px));word-break:keep-all}
+.badge-tooltip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border-width:6px;border-style:solid;border-color:#111 transparent transparent transparent}
 @media (hover:hover) and (pointer:fine){
-.rank-badge:hover .badge-tooltip,
-.rank-badge.tooltip-left:hover .badge-tooltip,
-.rank-badge.tooltip-right:hover .badge-tooltip{
-opacity:1;
-pointer-events:auto;
+.rank-badge:hover .badge-tooltip{opacity:1;pointer-events:auto}
 }
-}
-.rank-badge.active .badge-tooltip,
-.rank-badge.active.tooltip-left .badge-tooltip,
-.rank-badge.active.tooltip-right .badge-tooltip{
-opacity:1;
-pointer-events:auto;
-}
-.rank-badge.tooltip-left .badge-tooltip{
-left:0;
-transform:translateX(0);
-}
-.rank-badge.tooltip-left .badge-tooltip::after{
-left:18px;
-transform:none;
-}
-.rank-badge.tooltip-right .badge-tooltip{
-left:auto;
-right:0;
-transform:translateX(0);
-}
-.rank-badge.tooltip-right .badge-tooltip::after{
-left:auto;
-right:18px;
-transform:none;
-}
+.rank-badge.active .badge-tooltip{opacity:1;pointer-events:auto}
+.rank-badge.tooltip-left .badge-tooltip{left:0;transform:none}
+.rank-badge.tooltip-left .badge-tooltip::after{left:18px;transform:none}
+.rank-badge.tooltip-right .badge-tooltip{left:auto;right:0;transform:none}
+.rank-badge.tooltip-right .badge-tooltip::after{left:auto;right:18px;transform:none}
 @media (max-width: 768px){
-.badge-tooltip{
-white-space:normal;
-max-width:220px;
-min-width:120px;
-text-align:center;
-font-size:12px;
-}
+.badge-tooltip{white-space:normal;min-width:120px;text-align:center;font-size:12px}
 }
 .balls{display:flex;gap:8px;flex-wrap:wrap}
 .lotto-ball{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:16px;transform:scale(0);transition:transform .4s cubic-bezier(.34,1.56,.64,1)}
@@ -187,7 +131,7 @@ font-size:12px;
 <body>
 <div class="container">
 <h1>🎱 오픽 로또</h1>
-<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장</div>
+<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 대표님</div>
 <div class="top-panel">
 <div class="latest-round">
 <div class="round-num" id="latestRoundNum">최신 회차 불러오는 중...</div>
@@ -410,6 +354,185 @@ b.classList.toggle('active',match);
 });
 }
 
+
+function shuffleArray(arr){
+var a=arr.slice();
+for(var i=a.length-1;i>0;i--){
+var j=Math.floor(Math.random()*(i+1));
+var t=a[i];
+a[i]=a[j];
+a[j]=t;
+}
+return a;
+}
+
+function choosePattern(axisCount){
+var candidates=[];
+if(axisCount===2){
+candidates=[
+{name:'2211',weight:38},
+{name:'3111',weight:33},
+{name:'222',weight:13},
+{name:'free',weight:16}
+];
+}else if(axisCount===3){
+candidates=[
+{name:'3111',weight:70},
+{name:'free',weight:30}
+];
+}else{
+candidates=[
+{name:'2211',weight:38},
+{name:'3111',weight:33},
+{name:'222',weight:13},
+{name:'free',weight:16}
+];
+}
+var total=0;
+for(var i=0;i<candidates.length;i++)total+=candidates[i].weight;
+var r=Math.random()*total;
+for(var i=0;i<candidates.length;i++){
+r-=candidates[i].weight;
+if(r<=0)return candidates[i].name;
+}
+return candidates[candidates.length-1].name;
+}
+
+function makeGroupPlan(axisGroup,axisCount,patternName){
+var groups=[1,2,3,4,5];
+var otherGroups=groups.filter(function(g){return g!==axisGroup});
+var plan={1:0,2:0,3:0,4:0,5:0};
+plan[axisGroup]=axisCount;
+
+if(patternName==='2211'){
+var shuffled=shuffleArray(otherGroups);
+plan[shuffled[0]]=2;
+plan[shuffled[1]]=1;
+plan[shuffled[2]]=1;
+}
+else if(patternName==='3111'){
+var shuffled=shuffleArray(otherGroups);
+if(axisCount===3){
+plan[shuffled[0]]=1;
+plan[shuffled[1]]=1;
+plan[shuffled[2]]=1;
+}else{
+plan[axisGroup]=3;
+plan[shuffled[0]]=1;
+plan[shuffled[1]]=1;
+plan[shuffled[2]]=1;
+}
+}
+else if(patternName==='222'){
+var shuffled=shuffleArray(otherGroups);
+plan[shuffled[0]]=2;
+plan[shuffled[1]]=2;
+}
+else{
+var remain=6-axisCount;
+while(remain>0){
+var targetGroups=shuffleArray(groups);
+for(var j=0;j<targetGroups.length&&remain>0;j++){
+var g=targetGroups[j];
+if(plan[g]<3){
+plan[g]++;
+remain--;
+}
+}
+}
+}
+return plan;
+}
+
+function pickNumbersByPlan(plan,fixedAxis,groupId){
+var nums=fixedAxis.slice();
+for(var g=1;g<=5;g++){
+var need=plan[g];
+if(g===groupId)need-=fixedAxis.length;
+if(need<=0)continue;
+var pool=GROUPS[g].range.filter(function(n){return nums.indexOf(n)<0});
+var picked=pickNums(pool,need);
+nums=nums.concat(picked);
+}
+return nums.sort(function(a,b){return a-b});
+}
+
+function makeFreePlan(pattern){
+var freePlan={1:0,2:0,3:0,4:0,5:0};
+if(pattern==='2211'){
+var chosenGroups=shuffleArray([1,2,3,4,5]).slice(0,4);
+freePlan[chosenGroups[0]]=2;
+freePlan[chosenGroups[1]]=2;
+freePlan[chosenGroups[2]]=1;
+freePlan[chosenGroups[3]]=1;
+}else if(pattern==='3111'){
+var chosenGroups=shuffleArray([1,2,3,4,5]).slice(0,4);
+freePlan[chosenGroups[0]]=3;
+freePlan[chosenGroups[1]]=1;
+freePlan[chosenGroups[2]]=1;
+freePlan[chosenGroups[3]]=1;
+}else if(pattern==='222'){
+var chosenGroups=shuffleArray([1,2,3,4,5]).slice(0,3);
+freePlan[chosenGroups[0]]=2;
+freePlan[chosenGroups[1]]=2;
+freePlan[chosenGroups[2]]=2;
+}else{
+var remain=6;
+while(remain>0){
+var targets=shuffleArray([1,2,3,4,5]);
+for(var t=0;t<targets.length&&remain>0;t++){
+if(freePlan[targets[t]]<3){
+freePlan[targets[t]]++;
+remain--;
+}
+}
+}
+}
+return freePlan;
+}
+
+function bindMobileTooltips(){
+document.addEventListener('click',function(e){
+var badge=e.target.closest('.rank-badge');
+document.querySelectorAll('.rank-badge.active').forEach(function(el){
+if(el!==badge){
+el.classList.remove('active');
+el.classList.remove('tooltip-left');
+el.classList.remove('tooltip-right');
+}
+});
+if(badge){
+badge.classList.toggle('active');
+if(badge.classList.contains('active')){
+adjustTooltipPosition(badge);
+}else{
+badge.classList.remove('tooltip-left');
+badge.classList.remove('tooltip-right');
+}
+e.stopPropagation();
+}
+});
+window.addEventListener('resize',function(){
+document.querySelectorAll('.rank-badge.active').forEach(function(badge){
+adjustTooltipPosition(badge);
+});
+});
+}
+
+function adjustTooltipPosition(badge){
+if(!badge)return;
+var tip=badge.querySelector('.badge-tooltip');
+if(!tip)return;
+badge.classList.remove('tooltip-left');
+badge.classList.remove('tooltip-right');
+var rect=tip.getBoundingClientRect();
+if(rect.left<8){
+badge.classList.add('tooltip-left');
+}else if(rect.right>window.innerWidth-8){
+badge.classList.add('tooltip-right');
+}
+}
+
 function init(){
 var legend=document.getElementById('legend');
 for(var k in GROUPS){
@@ -536,18 +659,35 @@ return statMode==='rand'?getRandom(pool,n):weightedRandom(pool,n);
 
 function generateGames(groupId){
 var games=[];
+
 if(groupId===0){
-var all=[];
-for(var i=1;i<=45;i++)all.push(i);
-for(var i=0;i<5;i++)games.push({nums:pickNums(all,6),axis:[]});
-}else{
-var axis=getRandom(GROUPS[groupId].range,axisCount);
-var outside=[];
-for(var i=1;i<=45;i++)if(axis.indexOf(i)<0)outside.push(i);
-var extraCount=6-axisCount;
 for(var i=0;i<5;i++){
-var extra=pickNums(outside,extraCount);
-games.push({nums:axis.concat(extra).sort(function(a,b){return a-b}),axis:axis});
+var pattern=choosePattern(0);
+var freePlan=makeFreePlan(pattern);
+var nums=[];
+
+for(var g=1;g<=5;g++){
+if(freePlan[g]>0){
+nums=nums.concat(pickNums(GROUPS[g].range,freePlan[g]));
+}
+}
+
+games.push({
+nums:nums.sort(function(a,b){return a-b}),
+axis:[]
+});
+}
+}else{
+for(var i=0;i<5;i++){
+var axis=getRandom(GROUPS[groupId].range,axisCount);
+var pattern=choosePattern(axisCount);
+var plan=makeGroupPlan(groupId,axisCount,pattern);
+var nums=pickNumbersByPlan(plan,axis,groupId);
+
+games.push({
+nums:nums,
+axis:axis
+});
 }
 }
 return games;
@@ -585,13 +725,13 @@ for(var rank=1;rank<=5;rank++){
 if(stats[rank].count>0){
 hasMatch=true;
 var emoji=['','✅','💎','🎁','🎯','🍀'][rank];
-var tooltip = stats[rank].rounds
-  .slice()
-  .sort(function(a,b){return b-a;})
-  .map(function(round){
-    return (winStats.total + 1 - round) + '회';
-  })
-  .join(', ');
+var tooltip=stats[rank].rounds
+.slice()
+.sort(function(a,b){return b-a})
+.map(function(round){
+return (winStats.total + 1 - round) + '회';
+})
+.join(', ');
 rankHtml+='<span class="rank-badge rank-'+rank+'">'+emoji+rank+'등 '+stats[rank].count+'회<span class="badge-tooltip">'+tooltip+'</span></span>';
 }
 }
@@ -608,7 +748,7 @@ ballsHtml+='<div class="lotto-ball" id="b-'+setNum+'-'+i+'-'+bi+'" style="backgr
 });
 
 if(hasMatch){
-row.innerHTML='<span class="game-idx">#'+globalIdx+'</span><div class="winning-stats"><div class="winning-label">'+winStats.total+'회중 당첨..</div><div class="rank-badges">'+rankHtml+'</div></div><div class="balls">'+ballsHtml+'</div>';
+row.innerHTML='<span class="game-idx">#'+globalIdx+'</span><div class="winning-stats"><div class="winning-label">'+winStats.total+'회중 당첨.</div><div class="rank-badges">'+rankHtml+'</div></div><div class="balls">'+ballsHtml+'</div>';
 }else{
 row.innerHTML='<span class="game-idx">#'+globalIdx+'</span><div class="balls">'+ballsHtml+'</div>';
 }
@@ -624,42 +764,6 @@ setTimeout(function(){
 var ball=document.getElementById('b-'+setNum+'-'+i+'-'+bi);
 if(ball)ball.style.transform='scale(1)';
 },i*160+bi*70);
-});
-});
-}
-
-function updateTooltipPlacement(badge){
-if(!badge)return;
-badge.classList.remove('tooltip-left','tooltip-right');
-var tip=badge.querySelector('.badge-tooltip');
-if(!tip)return;
-var rect=badge.getBoundingClientRect();
-var vw=window.innerWidth||document.documentElement.clientWidth;
-var estimatedWidth=tip.offsetWidth||220;
-var centerLeft=rect.left+(rect.width/2)-(estimatedWidth/2);
-var centerRight=rect.left+(rect.width/2)+(estimatedWidth/2);
-if(centerLeft<12){
-badge.classList.add('tooltip-left');
-}else if(centerRight>vw-12){
-badge.classList.add('tooltip-right');
-}
-}
-
-function bindMobileTooltips(){
-document.addEventListener('click',function(e){
-var badge=e.target.closest('.rank-badge');
-document.querySelectorAll('.rank-badge.active').forEach(function(el){
-if(el!==badge)el.classList.remove('active');
-});
-if(badge){
-updateTooltipPlacement(badge);
-badge.classList.toggle('active');
-e.stopPropagation();
-}
-});
-window.addEventListener('resize',function(){
-document.querySelectorAll('.rank-badge.active').forEach(function(el){
-updateTooltipPlacement(el);
 });
 });
 }
@@ -832,7 +936,7 @@ setTimeout(function(){
 var modeLabel=statMode!=='rand'?' | '+modeLabels[statMode]+' 모드 적용':'';
 var done=document.createElement('div');
 done.className='done-msg';
-done.innerHTML='<div class="done-icon">🍀</div><div class="done-text">총 10게임 완성! 이번주 대박 나세요 ♡!</div><div class="done-sub">✨ 축번호 '+axisCount+'개'+modeLabel+' &nbsp;|&nbsp; 📋 자동 복사 중...</div>';
+done.innerHTML='<div class="done-icon">🍀</div><div class="done-text">총 10게임 완성! 이번주 대박 나세요 대표님!</div><div class="done-sub">✨ 축번호 '+axisCount+'개'+modeLabel+' &nbsp;|&nbsp; 📋 자동 복사 중...</div>';
 capture.appendChild(done);
 
 btn.textContent='🔄 다시 뽑기';
