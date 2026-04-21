@@ -515,7 +515,7 @@ for(var rank=1;rank<=5;rank++){
 if(stats[rank].count>0){
 hasMatch=true;
 var emoji=['','✅','💎','🎁','🎯','🍀'][rank];
-var tooltip=(stats[rank].count+1-stats[rank].rounds.join(', '))+'회';
+var tooltip=(winStats.total+1-stats[rank].rounds.join(', '))+'회';
 rankHtml+='<span class="rank-badge rank-'+rank+'" title="'+tooltip+'">'+emoji+rank+'등 '+stats[rank].count+'회</span>';
 }
 }
@@ -532,7 +532,7 @@ ballsHtml+='<div class="lotto-ball" id="b-'+setNum+'-'+i+'-'+bi+'" style="backgr
 });
 
 if(hasMatch){
-row.innerHTML='<span class="game-idx">#'+globalIdx+'</span><div class="winning-stats"><div class="winning-label">'+winStats.total+'회중 당첨</div><div class="rank-badges">'+rankHtml+'</div></div><div class="balls">'+ballsHtml+'</div>';
+row.innerHTML='<span class="game-idx">#'+globalIdx+'</span><div class="winning-stats"><div class="winning-label">'+winStats.total+'회중 당첨.</div><div class="rank-badges">'+rankHtml+'</div></div><div class="balls">'+ballsHtml+'</div>';
 }else{
 row.innerHTML='<span class="game-idx">#'+globalIdx+'</span><div class="balls">'+ballsHtml+'</div>';
 }
