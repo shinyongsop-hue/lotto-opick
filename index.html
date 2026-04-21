@@ -97,12 +97,81 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 .winning-stats{min-width:160px;font-size:11px;color:#999;line-height:1.4}
 .winning-label{color:#667eea;font-weight:600;margin-bottom:4px}
 .rank-badges{display:flex;gap:6px;flex-wrap:wrap}
-.rank-badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;white-space:nowrap;cursor:help}
+.rank-badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;white-space:nowrap;cursor:pointer;position:relative}
 .rank-1{background:#FFD700;color:#111}
 .rank-2{background:#C0C0C0;color:#111}
 .rank-3{background:#CD7F32;color:#fff}
 .rank-4{background:#4a90e2;color:#fff}
 .rank-5{background:#7dff8a;color:#111}
+.badge-tooltip{
+position:absolute;
+bottom:calc(100% + 8px);
+left:50%;
+transform:translateX(-50%);
+background:#111;
+color:#fff;
+padding:8px 10px;
+border-radius:8px;
+font-size:11px;
+line-height:1.4;
+white-space:nowrap;
+box-shadow:0 4px 12px rgba(0,0,0,0.35);
+opacity:0;
+pointer-events:none;
+transition:opacity .2s ease,transform .2s ease;
+z-index:1000;
+}
+.badge-tooltip::after{
+content:"";
+position:absolute;
+top:100%;
+left:50%;
+transform:translateX(-50%);
+border-width:6px;
+border-style:solid;
+border-color:#111 transparent transparent transparent;
+}
+@media (hover:hover) and (pointer:fine){
+.rank-badge:hover .badge-tooltip,
+.rank-badge.tooltip-left:hover .badge-tooltip,
+.rank-badge.tooltip-right:hover .badge-tooltip{
+opacity:1;
+pointer-events:auto;
+}
+}
+.rank-badge.active .badge-tooltip,
+.rank-badge.active.tooltip-left .badge-tooltip,
+.rank-badge.active.tooltip-right .badge-tooltip{
+opacity:1;
+pointer-events:auto;
+}
+.rank-badge.tooltip-left .badge-tooltip{
+left:0;
+transform:translateX(0);
+}
+.rank-badge.tooltip-left .badge-tooltip::after{
+left:18px;
+transform:none;
+}
+.rank-badge.tooltip-right .badge-tooltip{
+left:auto;
+right:0;
+transform:translateX(0);
+}
+.rank-badge.tooltip-right .badge-tooltip::after{
+left:auto;
+right:18px;
+transform:none;
+}
+@media (max-width: 768px){
+.badge-tooltip{
+white-space:normal;
+max-width:220px;
+min-width:120px;
+text-align:center;
+font-size:12px;
+}
+}
 .balls{display:flex;gap:8px;flex-wrap:wrap}
 .lotto-ball{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:16px;transform:scale(0);transition:transform .4s cubic-bezier(.34,1.56,.64,1)}
 .lotto-ball.axis{border:3px solid #fff!important;box-shadow:0 0 0 3px #fff,0 0 16px currentColor,0 3px 10px #0009!important}
@@ -118,7 +187,7 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 <body>
 <div class="container">
 <h1>🎱 오픽 로또</h1>
-<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 대표님</div>
+<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장</div>
 <div class="top-panel">
 <div class="latest-round">
 <div class="round-num" id="latestRoundNum">최신 회차 불러오는 중...</div>
@@ -354,6 +423,7 @@ legend.appendChild(d);
 computeWeights();
 renderStats();
 fetchLatestRound();
+bindMobileTooltips();
 }
 
 function computeWeights(){
@@ -516,11 +586,13 @@ if(stats[rank].count>0){
 hasMatch=true;
 var emoji=['','✅','💎','🎁','🎯','🍀'][rank];
 var tooltip = stats[rank].rounds
+  .slice()
+  .sort(function(a,b){return b-a;})
   .map(function(round){
     return (winStats.total + 1 - round) + '회';
   })
   .join(', ');
-rankHtml+='<span class="rank-badge rank-'+rank+'" title="'+tooltip+'">'+emoji+rank+'등 '+stats[rank].count+'회</span>';
+rankHtml+='<span class="rank-badge rank-'+rank+'">'+emoji+rank+'등 '+stats[rank].count+'회<span class="badge-tooltip">'+tooltip+'</span></span>';
 }
 }
 
@@ -552,6 +624,42 @@ setTimeout(function(){
 var ball=document.getElementById('b-'+setNum+'-'+i+'-'+bi);
 if(ball)ball.style.transform='scale(1)';
 },i*160+bi*70);
+});
+});
+}
+
+function updateTooltipPlacement(badge){
+if(!badge)return;
+badge.classList.remove('tooltip-left','tooltip-right');
+var tip=badge.querySelector('.badge-tooltip');
+if(!tip)return;
+var rect=badge.getBoundingClientRect();
+var vw=window.innerWidth||document.documentElement.clientWidth;
+var estimatedWidth=tip.offsetWidth||220;
+var centerLeft=rect.left+(rect.width/2)-(estimatedWidth/2);
+var centerRight=rect.left+(rect.width/2)+(estimatedWidth/2);
+if(centerLeft<12){
+badge.classList.add('tooltip-left');
+}else if(centerRight>vw-12){
+badge.classList.add('tooltip-right');
+}
+}
+
+function bindMobileTooltips(){
+document.addEventListener('click',function(e){
+var badge=e.target.closest('.rank-badge');
+document.querySelectorAll('.rank-badge.active').forEach(function(el){
+if(el!==badge)el.classList.remove('active');
+});
+if(badge){
+updateTooltipPlacement(badge);
+badge.classList.toggle('active');
+e.stopPropagation();
+}
+});
+window.addEventListener('resize',function(){
+document.querySelectorAll('.rank-badge.active').forEach(function(el){
+updateTooltipPlacement(el);
 });
 });
 }
@@ -724,7 +832,7 @@ setTimeout(function(){
 var modeLabel=statMode!=='rand'?' | '+modeLabels[statMode]+' 모드 적용':'';
 var done=document.createElement('div');
 done.className='done-msg';
-done.innerHTML='<div class="done-icon">🍀</div><div class="done-text">총 10게임 완성! 이번주 대박 나세요 대표님!</div><div class="done-sub">✨ 축번호 '+axisCount+'개'+modeLabel+' &nbsp;|&nbsp; 📋 자동 복사 중...</div>';
+done.innerHTML='<div class="done-icon">🍀</div><div class="done-text">총 10게임 완성! 이번주 대박 나세요 ♡!</div><div class="done-sub">✨ 축번호 '+axisCount+'개'+modeLabel+' &nbsp;|&nbsp; 📋 자동 복사 중...</div>';
 capture.appendChild(done);
 
 btn.textContent='🔄 다시 뽑기';
