@@ -515,7 +515,7 @@ for(var rank=1;rank<=5;rank++){
 if(stats[rank].count>0){
 hasMatch=true;
 var emoji=['','✅','💎','🎁','🎯','🍀'][rank];
-var tooltip=(winStats.total+1-stats[rank].rounds.join(', '))+'회';
+var tooltip=(winStats.totalRounds-stats[rank].rounds.join(', '))+1+'회';
 rankHtml+='<span class="rank-badge rank-'+rank+'" title="'+tooltip+'">'+emoji+rank+'등 '+stats[rank].count+'회</span>';
 }
 }
