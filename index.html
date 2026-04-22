@@ -18,6 +18,8 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 .latest-ball{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;box-shadow:0 2px 6px #0009}
 .bonus-ball{width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;box-shadow:0 2px 6px #0009;margin-left:4px}
 .loading-msg{text-align:center;font-size:12px;color:#667eea;margin-top:8px}
+.loading-dots::after{content:'';animation:loadingDots 1.5s infinite}
+@keyframes loadingDots{0%,20%{content:''}40%{content:'.'}60%{content:'..'}80%,100%{content:'...'}}
 .stat-toggle{background:#16213e;border-radius:12px;padding:16px 20px;cursor:pointer;user-select:none;transition:background .3s;border:1px solid #2a2a3e;display:flex;justify-content:space-between;align-items:center}
 .stat-toggle:hover{background:#1e2a4a}
 .stat-toggle.open{background:#1e2a4a}
@@ -47,9 +49,11 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 .heatmap-title{font-size:13px;color:#888;margin-bottom:12px}
 #heatmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px}
 .hm-ball{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;cursor:pointer;position:relative;transition:transform .2s}
-.hm-ball:hover{transform:scale(1.15)}
-.hm-tip{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#1a1a2e;padding:4px 8px;border-radius:6px;font-size:11px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .3s;box-shadow:0 2px 8px #0009}
+.hm-ball:hover{transform:scale(1.15);z-index:10}
+.hm-tip{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;font-weight:600;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .3s;box-shadow:0 4px 12px rgba(0,0,0,0.5);z-index:1000;border:1px solid #333}
+.hm-tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border-width:6px;border-style:solid;border-color:#111 transparent transparent transparent}
 .hm-ball:hover .hm-tip{opacity:1}
+.hm-ball.active .hm-tip{opacity:1}
 .hot-cold-section{display:flex;gap:16px;margin-bottom:20px}
 .hc-box{flex:1;background:#16213e;border-radius:10px;padding:14px;border:1px solid #2a2a3e}
 .hc-title{font-size:12px;color:#888;margin-bottom:10px;text-align:center}
@@ -139,7 +143,7 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 <div id="latestBalls"></div>
 </div>
 <div id="latestBonus" style="margin-top:8px;font-size:12px;color:#888"></div>
-<div class="loading-msg" id="loadingMsg" style="display:block">🔄 최신 회차 확인 중...</div>
+<div class="loading-msg loading-dots" id="loadingMsg" style="display:block">🔄 최신 회차 확인 중</div>
 </div>
 <div class="stat-toggle" id="statToggle" onclick="toggleStat()">
 <span><strong>🎯 통계 & 설정</strong> (번호 생성 옵션 조정)</span>
@@ -282,6 +286,8 @@ return{stats:combined,total:totalRounds};
 
 async function fetchLatestRound(){
 var loadingMsg=document.getElementById('loadingMsg');
+loadingMsg.className='loading-msg loading-dots';
+loadingMsg.style.display='block';
 try{
 var proxy='https://api.allorigins.win/get?url=';
 var url=encodeURIComponent('https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=1220');
@@ -291,6 +297,7 @@ if(data.contents){
 var lottoData=JSON.parse(data.contents);
 if(lottoData.returnValue==='success'){
 updateLatestRound(lottoData);
+loadingMsg.className='loading-msg';
 loadingMsg.textContent='✅ 최신 회차 업데이트 완료';
 setTimeout(function(){loadingMsg.style.display='none'},2000);
 return;
@@ -299,6 +306,7 @@ return;
 }catch(e){
 console.log('CORS proxy failed:',e);
 }
+loadingMsg.className='loading-msg';
 loadingMsg.textContent='기본 데이터 사용 (1220회)';
 setTimeout(function(){loadingMsg.style.display='none'},2000);
 }
@@ -354,6 +362,25 @@ b.classList.toggle('active',match);
 });
 }
 
+function bindHeatmapTooltips(){
+document.querySelectorAll('.hm-ball').forEach(function(ball){
+ball.addEventListener('click',function(e){
+var wasActive=this.classList.contains('active');
+document.querySelectorAll('.hm-ball.active').forEach(function(b){
+b.classList.remove('active');
+});
+if(!wasActive){
+this.classList.add('active');
+}
+e.stopPropagation();
+});
+});
+document.addEventListener('click',function(){
+document.querySelectorAll('.hm-ball.active').forEach(function(b){
+b.classList.remove('active');
+});
+});
+}
 
 function shuffleArray(arr){
 var a=arr.slice();
@@ -448,7 +475,9 @@ function pickNumbersByPlan(plan,fixedAxis,groupId){
 var nums=fixedAxis.slice();
 for(var g=1;g<=5;g++){
 var need=plan[g];
-if(g===groupId)need-=fixedAxis.length;
+if(g===groupId){
+need-=fixedAxis.length;
+}
 if(need<=0)continue;
 var pool=GROUPS[g].range.filter(function(n){return nums.indexOf(n)<0});
 var picked=pickNums(pool,need);
@@ -547,6 +576,7 @@ computeWeights();
 renderStats();
 fetchLatestRound();
 bindMobileTooltips();
+bindHeatmapTooltips();
 }
 
 function computeWeights(){
