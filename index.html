@@ -708,15 +708,17 @@ axis:[]
 });
 }
 }else{
-for(var i=0;i<5;i++){
+// 축번호는 세트(5게임) 공통이어야 하므로 한 번만 뽑는다.
 var axis=getRandom(GROUPS[groupId].range,axisCount);
+
+for(var i=0;i<5;i++){
 var pattern=choosePattern(axisCount);
 var plan=makeGroupPlan(groupId,axisCount,pattern);
 var nums=pickNumbersByPlan(plan,axis,groupId);
 
 games.push({
 nums:nums,
-axis:axis
+axis:axis.slice()
 });
 }
 }
