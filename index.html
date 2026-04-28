@@ -57,8 +57,8 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 .hot-cold-section{display:flex;gap:16px;margin-bottom:20px}
 .hc-box{flex:1;background:#16213e;border-radius:10px;padding:14px;border:1px solid #2a2a3e}
 .hc-title{font-size:12px;color:#888;margin-bottom:10px;text-align:center}
-.hc-nums{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
-.hc-num{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px}
+.hc-nums{display:flex;flex-direction:row;flex-wrap:nowrap;gap:5px;justify-content:flex-start;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 4px}
+.hc-num{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0}
 .grp-dist-section{margin-bottom:0}
 .grp-dist-title{font-size:13px;color:#888;margin-bottom:12px}
 #grpBars{}
@@ -120,6 +120,12 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 @media (max-width: 768px){
 .badge-tooltip{white-space:normal;min-width:120px;text-align:center;font-size:12px}
 }
+@media (max-width: 600px){
+.hot-cold-section{flex-direction:column;gap:10px}
+.hc-box{padding:12px 10px}
+.hc-nums{gap:4px}
+.hc-num{width:30px;height:30px;font-size:12px}
+}
 .balls{display:flex;gap:8px;flex-wrap:wrap}
 .lotto-ball{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:16px;transform:scale(0);transition:transform .4s cubic-bezier(.34,1.56,.64,1)}
 .lotto-ball.axis{border:3px solid #fff!important;box-shadow:0 0 0 3px #fff,0 0 16px currentColor,0 3px 10px #0009!important}
@@ -129,13 +135,16 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 .done-sub{font-size:13px;color:#888}
 #copyToast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#667eea;color:#fff;padding:14px 28px;border-radius:30px;font-weight:600;box-shadow:0 4px 16px #667eea66;opacity:0;pointer-events:none;transition:opacity .3s;z-index:9999}
 #copyToast.show{opacity:1}
+#saveImageBtn{display:none;margin:24px auto 0;padding:14px 40px;background:linear-gradient(135deg,#7dff8a,#00cfaa);color:#111;border:none;border-radius:30px;font-size:17px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 4px 16px #7dff8a44}
+#saveImageBtn:hover{transform:translateY(-2px);box-shadow:0 6px 20px #7dff8a66}
+.save-wrap{text-align:center}
 @keyframes popIn{0%{transform:scale(0);opacity:0}60%{transform:scale(1.15);opacity:1}100%{transform:scale(1)}}
 </style>
 </head>
 <body>
 <div class="container">
 <h1>🎱 오픽 로또</h1>
-<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장(ver.2604271900)</div>
+<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장(ver.2604281953)</div>
 <div class="top-panel">
 <div class="latest-round">
 <div class="round-num" id="latestRoundNum">최신 회차 불러오는 중...</div>
@@ -198,11 +207,11 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 <div class="hot-cold-section">
 <div class="hc-box">
 <div class="hc-title">🔥 최다 출현 TOP7</div>
-<div id="hotNums"></div>
+<div id="hotNums" class="hc-nums"></div>
 </div>
 <div class="hc-box">
 <div class="hc-title">🌙 최저 출현 TOP7</div>
-<div id="coldNums"></div>
+<div id="coldNums" class="hc-nums"></div>
 </div>
 </div>
 <div class="grp-dist-section">
@@ -234,6 +243,7 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 <button id="startBtn" onclick="runGame()">🎱 로또번호 추출시작</button>
 </div>
 <div id="captureArea"></div>
+<div class="save-wrap"><button id="saveImageBtn" onclick="saveImage()">📸 이미지로 저장</button></div>
 <div id="copyToast"></div>
 <script>
 var GROUPS={0:{name:"0그룹",label:"완전랜덤",color:"#ffffff",range:[]},1:{name:"1그룹",label:"1~10",color:"#FFD700",range:[1,2,3,4,5,6,7,8,9,10]},2:{name:"2그룹",label:"11~20",color:"#00cfff",range:[11,12,13,14,15,16,17,18,19,20]},3:{name:"3그룹",label:"21~30",color:"#ff6b6b",range:[21,22,23,24,25,26,27,28,29,30]},4:{name:"4그룹",label:"31~40",color:"#7dff8a",range:[31,32,33,34,35,36,37,38,39,40]},5:{name:"5그룹",label:"41~45",color:"#d580ff",range:[41,42,43,44,45]}};
@@ -245,8 +255,8 @@ var HISTORICAL_DRAWS=[{'n':[10,23,29,33,37,40],'b':16},{'n':[9,13,21,25,32,42],'
 
 // 3. 함수 정의
 function updateFrequencyFromNewDraws() {
-  if (HISTORICAL_DRAWS.length > 1221) {
-    for (var i = 1221; i < HISTORICAL_DRAWS.length; i++) {
+  if (HISTORICAL_DRAWS.length > 1220) {
+    for (var i = 1220; i < HISTORICAL_DRAWS.length; i++) {
       var draw = HISTORICAL_DRAWS[i];
       for (var j = 0; j < draw.n.length; j++) {
         HISTORICAL_FREQ[draw.n[j]]++;
@@ -271,6 +281,7 @@ for(var i=0;i<HISTORICAL_DRAWS.length;i++){
 var draw=HISTORICAL_DRAWS[i];
 var roundNum=1221-i;
 var winNums=draw.n;
+
 var bonus=draw.b;
 var matches=0;
 var bonusMatch=false;
@@ -305,28 +316,28 @@ var loadingMsg=document.getElementById('loadingMsg');
 loadingMsg.className='loading-msg loading-dots';
 loadingMsg.style.display='block';
 try{
+var controller=new AbortController();
+var timer=setTimeout(function(){controller.abort();},5000);
 var proxy='https://api.allorigins.win/get?url=';
 var url=encodeURIComponent('https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=1221');
-var response=await fetch(proxy+url);
+var response=await fetch(proxy+url,{signal:controller.signal});
+clearTimeout(timer);
 var data=await response.json();
 if(data.contents){
 var lottoData=JSON.parse(data.contents);
 if(lottoData.returnValue==='success'){
 updateLatestRound(lottoData);
 loadingMsg.className='loading-msg';
-//loadingMsg.textContent='✅ 최신 회차 업데이트 완료';
-//setTimeout(function(){loadingMsg.style.display='none'},2000);
-loadingMsg.className='loading-msg';
-loadingMsg.textContent='기본 데이터 사용 (' + HISTORICAL_DRAWS.length + '회)';  // ← 1221 대신!
+loadingMsg.textContent='기본 데이터 사용 (' + HISTORICAL_DRAWS.length + '회)';
 setTimeout(function(){loadingMsg.style.display='none'},2000);
 return;
 }
 }
 }catch(e){
-console.log('CORS proxy failed:',e);
+console.log('네트워크 오류(타임아웃 포함):',e);
 }
 loadingMsg.className='loading-msg';
-loadingMsg.textContent='기본 데이터 사용 (1221회)';
+loadingMsg.textContent='기본 데이터 사용 ('+HISTORICAL_DRAWS.length+'회)';
 setTimeout(function(){loadingMsg.style.display='none'},2000);
 }
 
@@ -728,15 +739,15 @@ axis:[]
 });
 }
 }else{
-for(var i=0;i<5;i++){
 var axis=getRandom(GROUPS[groupId].range,axisCount);
+for(var i=0;i<5;i++){
 var pattern=choosePattern(axisCount);
 var plan=makeGroupPlan(groupId,axisCount,pattern);
 var nums=pickNumbersByPlan(plan,axis,groupId);
 
 games.push({
 nums:nums,
-axis:axis
+axis:axis.slice()
 });
 }
 }
@@ -851,32 +862,6 @@ b.style.textShadow='';
 });
 }
 
-function copyCapture(){
-simplifyBallsForCapture();
-requestAnimationFrame(function(){
-requestAnimationFrame(function(){
-html2canvas(document.getElementById('captureArea'),{backgroundColor:'#0e0e1a',scale:2,useCORS:true,logging:false,allowTaint:true,foreignObjectRendering:false}).then(function(canvas){
-restoreBallStyles();
-canvas.toBlob(function(blob){
-if(!blob)return;
-try{
-navigator.clipboard.write([new ClipboardItem({'image/png':blob})]).then(function(){
-showToast('📋 결과 이미지가 클립보드에 복사됐습니다!');
-}).catch(function(){
-fallbackDownload(canvas);
-});
-}catch(e){
-restoreBallStyles();
-fallbackDownload(canvas);
-}
-});
-}).catch(function(){
-restoreBallStyles();
-});
-});
-});
-}
-
 function fallbackDownload(canvas){
 var a=document.createElement('a');
 a.download='오픽로또결과.png';
@@ -915,6 +900,7 @@ slot2.className='slot-circle slot-empty';
 slot2.innerHTML='❓';
 slot2.removeAttribute('style');
 btn.style.display='none';
+document.getElementById('saveImageBtn').style.display='none';
 
 document.querySelectorAll('.small-marble,.shake-msg').forEach(function(e){
 e.remove();
@@ -986,16 +972,14 @@ setTimeout(function(){
 var modeLabel=statMode!=='rand'?' | '+modeLabels[statMode]+' 모드 적용':'';
 var done=document.createElement('div');
 done.className='done-msg';
-done.innerHTML='<div class="done-icon">🍀</div><div class="done-text">총 10게임 완성! 이번주 대박 나세요~♡♡</div><div class="done-sub">✨ 축번호 '+axisCount+'개'+modeLabel+' &nbsp;|&nbsp; 📋 자동 복사 중...</div>';
+done.innerHTML='<div class="done-icon">🍀</div><div class="done-text">총 10게임 완성! 이번주 대박 나세요~♡♡</div><div class="done-sub">✨ 축번호 '+axisCount+'개'+modeLabel+'</div>';
 capture.appendChild(done);
 
 btn.textContent='🔄 다시 뽑기';
 btn.style.display='inline-block';
 running=false;
 
-setTimeout(function(){
-copyCapture();
-},1400);
+document.getElementById('saveImageBtn').style.display='inline-block';
 },400);
 },600);
 },900);
@@ -1003,6 +987,32 @@ copyCapture();
 },600);
 },900);
 },1300);
+}
+
+function saveImage(){
+var btn=document.getElementById('saveImageBtn');
+var orig=btn.textContent;
+btn.textContent='⏳ 저장 중...';
+btn.disabled=true;
+simplifyBallsForCapture();
+requestAnimationFrame(function(){
+requestAnimationFrame(function(){
+html2canvas(document.getElementById('captureArea'),{backgroundColor:'#0e0e1a',scale:2,useCORS:true,logging:false,allowTaint:true,foreignObjectRendering:false}).then(function(canvas){
+restoreBallStyles();
+var a=document.createElement('a');
+a.download='오픽로또_'+new Date().toLocaleDateString('ko').replace(/\./g,'').replace(/ /g,'')+'.png';
+a.href=canvas.toDataURL();
+a.click();
+showToast('📸 이미지로 저장됐습니다!');
+btn.textContent=orig;
+btn.disabled=false;
+}).catch(function(){
+restoreBallStyles();
+btn.textContent=orig;
+btn.disabled=false;
+});
+});
+});
 }
 
 window.onload=init;
