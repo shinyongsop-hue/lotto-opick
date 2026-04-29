@@ -144,7 +144,7 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 <body>
 <div class="container">
 <h1>🎱 오픽 로또</h1>
-<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장(ver.2604291842)</div>
+<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장(ver.2604291851)</div>
 <div class="top-panel">
 <div class="latest-round">
 <div class="round-num" id="latestRoundNum">최신 회차 불러오는 중...</div>
@@ -1029,7 +1029,11 @@ window.onload=init;
 // ============================================================
 var SUPABASE_URL = 'https://ygzitmrkhxnzolgcmkpi.supabase.co';
 var SUPABASE_ANON_KEY = 'sb_publishable_CFgXZxJJdlMNGjgXMNv9jQ_JcAm9LQ-';
-var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+var sbClient = null;
+function getSB(){
+  if(!sbClient) sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return sbClient;
+}
 
 function getNextDrawDate(){
 var now=new Date();var day=now.getDay();
@@ -1045,10 +1049,11 @@ try{var r=await fetch('https://api.ipify.org?format=json');var d=await r.json();
 
 async function autoCleanIfNeeded(){
 try{
-var{count}=await supabase.from('opick_tickets').select('*',{count:'exact',head:true});
+var sb=getSB();
+var{count}=await sb.from('opick_tickets').select('*',{count:'exact',head:true});
 if(count>5000000){
-var{data:old}=await supabase.from('opick_tickets').select('id').order('created_at',{ascending:true}).limit(10000);
-if(old&&old.length>0){var ids=old.map(function(r){return r.id;});await supabase.from('opick_tickets').delete().in('id',ids);}
+var{data:old}=await sb.from('opick_tickets').select('id').order('created_at',{ascending:true}).limit(10000);
+if(old&&old.length>0){var ids=old.map(function(r){return r.id;});await sb.from('opick_tickets').delete().in('id',ids);}
 }}catch(e){console.log('autoClean:',e);}
 }
 
@@ -1059,7 +1064,7 @@ try{
 var drawDate=getNextDrawDate();var ip=clientIp||'unknown';
 var rows=games.map(function(g){return{numbers:g.nums,draw_date:drawDate,client_ip:ip};});
 await autoCleanIfNeeded();
-var{error}=await supabase.from('opick_tickets').insert(rows);
+var{error}=await getSB().from('opick_tickets').insert(rows);
 if(error){console.log('저장오류:',error.message);}
 else{console.log('✅',rows.length+'게임 저장 완료! 추첨일:'+drawDate);}
 }catch(e){console.log('saveTickets:',e);}
