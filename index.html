@@ -144,7 +144,7 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 <body>
 <div class="container">
 <h1>🎱 오픽 로또</h1>
-<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장(ver.2604281953)</div>
+<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장(ver.2604291842)</div>
 <div class="top-panel">
 <div class="latest-round">
 <div class="round-num" id="latestRoundNum">최신 회차 불러오는 중...</div>
@@ -884,6 +884,7 @@ t.classList.remove('show');
 function runGame(){
 if(running)return;
 running=true;
+allGeneratedGames=[];
 computeWeights();
 var btn=document.getElementById('startBtn');
 var bag=document.getElementById('bag');
@@ -952,8 +953,11 @@ if(r1.idx>=0)document.getElementById('marble-'+r1.idx).style.opacity='0.12';
 slot1.classList.remove('pulsing');
 renderDrawnMarble(slot1,r1.groupId);
 
+var games1=generateGames(r1.groupId);
+allGeneratedGames=allGeneratedGames.concat(games1);
+
 setTimeout(function(){
-renderSet(capture,1,r1.groupId,generateGames(r1.groupId));
+renderSet(capture,1,r1.groupId,games1);
 
 setTimeout(function(){
 slot2.innerHTML='⏳<div style="font-size:10px">뽑는중</div>';
@@ -965,8 +969,11 @@ if(r2.idx>=0)document.getElementById('marble-'+r2.idx).style.opacity='0.12';
 slot2.classList.remove('pulsing');
 renderDrawnMarble(slot2,r2.groupId);
 
+var games2=generateGames(r2.groupId);
+allGeneratedGames=allGeneratedGames.concat(games2);
+
 setTimeout(function(){
-renderSet(capture,2,r2.groupId,generateGames(r2.groupId));
+renderSet(capture,2,r2.groupId,games2);
 
 setTimeout(function(){
 var modeLabel=statMode!=='rand'?' | '+modeLabels[statMode]+' 모드 적용':'';
@@ -978,8 +985,8 @@ capture.appendChild(done);
 btn.textContent='🔄 다시 뽑기';
 btn.style.display='inline-block';
 running=false;
-
 document.getElementById('saveImageBtn').style.display='inline-block';
+saveTickets(allGeneratedGames);
 },400);
 },600);
 },900);
@@ -1016,6 +1023,50 @@ btn.disabled=false;
 }
 
 window.onload=init;
+
+// ============================================================
+// ✅ Supabase 연동 코드
+// ============================================================
+var SUPABASE_URL = 'https://ygzitmrkhxnzolgcmkpi.supabase.co';
+var SUPABASE_ANON_KEY = 'sb_publishable_CFgXZxJJdlMNGjgXMNv9jQ_JcAm9LQ-';
+var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function getNextDrawDate(){
+var now=new Date();var day=now.getDay();
+var d=(6-day+7)%7;if(d===0)d=7;
+var sat=new Date(now);sat.setDate(now.getDate()+d);
+return sat.toISOString().split('T')[0];
+}
+
+var clientIp=null;
+async function fetchClientIp(){
+try{var r=await fetch('https://api.ipify.org?format=json');var d=await r.json();clientIp=d.ip;}catch(e){clientIp='unknown';}
+}
+
+async function autoCleanIfNeeded(){
+try{
+var{count}=await supabase.from('opick_tickets').select('*',{count:'exact',head:true});
+if(count>5000000){
+var{data:old}=await supabase.from('opick_tickets').select('id').order('created_at',{ascending:true}).limit(10000);
+if(old&&old.length>0){var ids=old.map(function(r){return r.id;});await supabase.from('opick_tickets').delete().in('id',ids);}
+}}catch(e){console.log('autoClean:',e);}
+}
+
+var allGeneratedGames=[];
+
+async function saveTickets(games){
+try{
+var drawDate=getNextDrawDate();var ip=clientIp||'unknown';
+var rows=games.map(function(g){return{numbers:g.nums,draw_date:drawDate,client_ip:ip};});
+await autoCleanIfNeeded();
+var{error}=await supabase.from('opick_tickets').insert(rows);
+if(error){console.log('저장오류:',error.message);}
+else{console.log('✅',rows.length+'게임 저장 완료! 추첨일:'+drawDate);}
+}catch(e){console.log('saveTickets:',e);}
+}
+
+var _origInit=window.onload;
+window.onload=function(){_origInit&&_origInit();fetchClientIp();};
 </script>
 </body>
 </html>
