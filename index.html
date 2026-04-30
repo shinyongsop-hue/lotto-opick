@@ -25,7 +25,18 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 .block-sub{font-size:14px;color:#888;line-height:1.6}
 .block-time{font-size:13px;color:#667eea;margin-top:12px;font-weight:600}
 #countdown{font-size:28px;font-weight:900;color:#f59e0b;margin-top:8px}
-.loading-msg{text-align:center;font-size:12px;color:#667eea;margin-top:8px}
+.round-info-box{background:linear-gradient(135deg,#1a2040,#111827);border:1px solid #2a3a5e;border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:10px;justify-content:space-around;align-items:center}
+.ri-item{text-align:center}
+.ri-label{font-size:11px;color:#4a6080;margin-bottom:3px}
+.ri-value{font-size:18px;font-weight:800;color:#60a5fa}
+.ri-value.accent{color:#22c55e}
+.prev-result-box{background:#0f1520;border:1px solid #1e3060;border-radius:10px;padding:12px 16px;margin-bottom:14px}
+.prb-title{font-size:12px;color:#4a6080;margin-bottom:8px;font-weight:600}
+.prb-ranks{display:flex;gap:6px;flex-wrap:wrap}
+.prb-rank{display:flex;flex-direction:column;align-items:center;background:#131f33;border-radius:8px;padding:6px 10px;min-width:52px}
+.prb-rname{font-size:10px;font-weight:700;margin-bottom:2px}
+.prb-rcount{font-size:16px;font-weight:900}
+.prb-r1{color:#FFD700}.prb-r2{color:#C0C0C0}.prb-r3{color:#CD7F32}.prb-r4{color:#3b82f6}.prb-r5{color:#22c55e}.prb-r0{color:#4a6080}
 .loading-dots::after{content:'';animation:loadingDots 1.5s infinite}
 @keyframes loadingDots{0%,20%{content:''}40%{content:'.'}60%{content:'..'}80%,100%{content:'...'}}
 .stat-toggle{background:#16213e;border-radius:12px;padding:16px 20px;cursor:pointer;user-select:none;transition:background .3s;border:1px solid #2a2a3e;display:flex;justify-content:space-between;align-items:center}
@@ -152,9 +163,18 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 <body>
 <div class="container">
 <h1>🎱 오픽 로또</h1>
-<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장(ver.2604301105)</div>
+<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장(ver.2604301518)</div>
 <div class="top-panel">
 <div class="latest-round">
+<div id="roundInfoBox" class="round-info-box">
+  <div class="ri-item"><div class="ri-label">🎯 도전 회차</div><div class="ri-value" id="currentRoundDisplay">-</div></div>
+  <div class="ri-item"><div class="ri-label">🎱 이번회차 도전 번호</div><div class="ri-value accent" id="currentRoundCount">-</div></div>
+  <div class="ri-item"><div class="ri-label">📅 추첨일</div><div class="ri-value" id="currentDrawDate" style="font-size:14px">-</div></div>
+</div>
+<div id="prevResultBox" class="prev-result-box" style="display:none">
+  <div class="prb-title" id="prevResultTitle">직전 회차 도전 결과</div>
+  <div class="prb-ranks" id="prevResultRanks"></div>
+</div>
 <div class="round-num" id="latestRoundNum">최신 회차 불러오는 중...</div>
 <div class="latest-balls-row">
 <div id="latestBalls"></div>
@@ -1090,7 +1110,69 @@ window.onload=function(){
   checkBlockTime();
   _origInit&&_origInit();
   fetchClientIp();
+  loadRoundInfoFromDB();
 };
+
+// 회차 정보 + 도전 통계 DB에서 로드
+async function loadRoundInfoFromDB(){
+  try{
+    var drawDate=getNextDrawDate();
+    var kst=new Date(new Date().getTime()+9*60*60*1000);
+    var BASE_ROUND=1221;
+    var BASE_MS=new Date('2026-04-25T00:00:00Z').getTime();
+    var drawMs=new Date(drawDate+'T00:00:00Z').getTime();
+    var round=BASE_ROUND+Math.round((drawMs-BASE_MS)/(7*24*3600*1000));
+
+    // 현재 회차 표시
+    document.getElementById('currentRoundDisplay').textContent=round+'회 도전';
+    document.getElementById('currentDrawDate').textContent=drawDate;
+
+    // 이번 회차 도전 번호 수
+    var sb=getSB();
+    var{count}=await sb.from('opick_tickets').select('*',{count:'exact',head:true}).eq('draw_date',drawDate);
+    document.getElementById('currentRoundCount').textContent=(count||0).toLocaleString()+'게임';
+
+    // 직전 회차 결과
+    var prevDrawDate=new Date(new Date(drawDate+'T00:00:00Z').getTime()-7*24*3600*1000).toISOString().split('T')[0];
+    var prevRound=round-1;
+
+    // 직전 회차 당첨번호
+    var{data:winData}=await sb.from('lotto_results').select('*').eq('round',prevRound).single();
+    if(!winData){return;}
+
+    // 직전 회차 도전번호
+    var{data:tickets}=await sb.from('opick_tickets').select('numbers').eq('draw_date',prevDrawDate);
+    if(!tickets||!tickets.length){return;}
+
+    var winNums=[winData.n1,winData.n2,winData.n3,winData.n4,winData.n5,winData.n6];
+    var bonus=winData.bonus;
+    var cnt={0:0,1:0,2:0,3:0,4:0,5:0};
+    tickets.forEach(function(t){
+      var nums=t.numbers||[];
+      var match=0,bn=false;
+      nums.forEach(function(n){if(winNums.indexOf(n)>=0)match++;if(n===bonus)bn=true;});
+      var r=0;
+      if(match===6)r=1;
+      else if(match===5&&bn)r=2;
+      else if(match===5)r=3;
+      else if(match===4)r=4;
+      else if(match===3)r=5;
+      cnt[r]++;
+    });
+
+    document.getElementById('prevResultTitle').textContent=prevRound+'회 (추첨일:'+prevDrawDate+') 도전 결과 — 총 '+tickets.length.toLocaleString()+'게임';
+    var labels={0:'낙첨',1:'🥇1등',2:'🥈2등',3:'🥉3등',4:'🎯4등',5:'🍀5등'};
+    var cls={0:'prb-r0',1:'prb-r1',2:'prb-r2',3:'prb-r3',4:'prb-r4',5:'prb-r5'};
+    var html='';
+    [1,2,3,4,5,0].forEach(function(r){
+      html+='<div class="prb-rank"><div class="prb-rname '+cls[r]+'">'+labels[r]+'</div><div class="prb-rcount '+cls[r]+'">'+cnt[r].toLocaleString()+'</div></div>';
+    });
+    document.getElementById('prevResultRanks').innerHTML=html;
+    document.getElementById('prevResultBox').style.display='block';
+  }catch(e){
+    console.log('loadRoundInfo error:',e);
+  }
+}
 
 // 토요일 18:00~20:59 번호 추출 차단
 function checkBlockTime(){
