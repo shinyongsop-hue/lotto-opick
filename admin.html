@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎱 오픽 로또 백오피스</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#0b0f1a;color:#e2e8f0;padding:24px;min-height:100vh}
+.container{max-width:1100px;margin:0 auto}
+h1{font-size:26px;font-weight:900;color:#fff;margin-bottom:4px}
+.sub{font-size:13px;color:#4a6080;margin-bottom:28px}
+
+/* 카드 */
+.card{background:#111827;border:1px solid #1e2d47;border-radius:14px;padding:22px 24px;margin-bottom:20px}
+.card-title{font-size:14px;font-weight:700;color:#60a5fa;margin-bottom:16px;display:flex;align-items:center;gap:6px}
+
+/* 회차 선택 */
+.draw-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.draw-row select{background:#1e2d47;border:1px solid #2a3f60;border-radius:8px;color:#e2e8f0;padding:8px 12px;font-size:14px;outline:none;cursor:pointer}
+.btn{padding:9px 20px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-blue{background:#3b82f6;color:#fff}.btn-blue:hover{background:#2563eb}
+.btn-green{background:#22c55e;color:#111}.btn-green:hover{background:#16a34a}
+.btn-red{background:#ef4444;color:#fff}.btn-red:hover{background:#dc2626}
+.btn-gray{background:#2a3f60;color:#94a3b8}.btn-gray:hover{background:#334d7a}
+
+/* 당첨번호 입력 */
+.winning-inputs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.winning-inputs input{width:56px;height:48px;background:#1e2d47;border:1px solid #2a3f60;border-radius:10px;color:#fff;font-size:18px;font-weight:700;text-align:center;outline:none}
+.winning-inputs input:focus{border-color:#3b82f6}
+.bonus-label{font-size:12px;color:#f59e0b;font-weight:700;margin:0 4px}
+
+/* 통계 박스 */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:0}
+.stat-box{background:#0f172a;border-radius:10px;padding:14px;text-align:center;border:1px solid #1e2d47}
+.stat-rank{font-size:20px;margin-bottom:4px}
+.stat-count{font-size:28px;font-weight:900;color:#fff}
+.stat-label{font-size:11px;color:#4a6080;margin-top:2px}
+.rank-1 .stat-count{color:#FFD700}
+.rank-2 .stat-count{color:#C0C0C0}
+.rank-3 .stat-count{color:#CD7F32}
+.rank-4 .stat-count{color:#3b82f6}
+.rank-5 .stat-count{color:#22c55e}
+
+/* 테이블 */
+.tbl-wrap{overflow-x:auto;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#0f172a;color:#4a6080;font-weight:600;padding:10px 12px;text-align:left;border-bottom:1px solid #1e2d47;white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid #1a2540;vertical-align:middle}
+tr:hover td{background:#131f33}
+.ball{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:11px;font-weight:700;margin:1px;flex-shrink:0}
+.rank-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
+.r1{background:#FFD700;color:#111}
+.r2{background:#C0C0C0;color:#111}
+.r3{background:#CD7F32;color:#fff}
+.r4{background:#3b82f6;color:#fff}
+.r5{background:#22c55e;color:#111}
+.r0{background:#1e2d47;color:#4a6080}
+.ip-text{font-size:11px;color:#4a6080;font-family:monospace}
+.date-text{font-size:11px;color:#4a6080}
+
+/* 로딩 */
+.loading{text-align:center;padding:40px;color:#4a6080;font-size:14px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#3b82f6;color:#fff;padding:12px 24px;border-radius:24px;font-weight:600;box-shadow:0 4px 16px #3b82f666;opacity:0;pointer-events:none;transition:opacity .3s;z-index:9999}
+.toast.show{opacity:1}
+.empty{text-align:center;padding:32px;color:#4a6080;font-size:13px}
+.pager{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.page-btn{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #2a3f60;background:#1e2d47;color:#94a3b8;transition:all .2s}
+.page-btn:hover,.page-btn.active{background:#3b82f6;color:#fff;border-color:#3b82f6}
+.count-text{font-size:12px;color:#4a6080;margin-top:8px;text-align:right}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎱 오픽 로또 백오피스</h1>
+  <div class="sub">저장된 번호 조회 · 당첨번호 입력 · 등수 판정</div>
+
+  <!-- 회차 선택 -->
+  <div class="card">
+    <div class="card-title">📅 회차 선택</div>
+    <div class="draw-row">
+      <select id="drawSelect" onchange="onDrawChange()">
+        <option value="">회차를 선택하세요...</option>
+      </select>
+      <button class="btn btn-blue" onclick="loadDrawDates()">🔄 새로고침</button>
+      <span id="totalCount" style="font-size:12px;color:#4a6080"></span>
+    </div>
+  </div>
+
+  <!-- 당첨번호 입력 -->
+  <div class="card">
+    <div class="card-title">🏆 당첨번호 입력</div>
+    <div class="winning-inputs">
+      <input type="number" id="w1" min="1" max="45" placeholder="1">
+      <input type="number" id="w2" min="1" max="45" placeholder="2">
+      <input type="number" id="w3" min="1" max="45" placeholder="3">
+      <input type="number" id="w4" min="1" max="45" placeholder="4">
+      <input type="number" id="w5" min="1" max="45" placeholder="5">
+      <input type="number" id="w6" min="1" max="45" placeholder="6">
+      <span class="bonus-label">+ 보너스</span>
+      <input type="number" id="wb" min="1" max="45" placeholder="보">
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-green" onclick="judgeAll()">⚡ 등수 판정 실행</button>
+      <button class="btn btn-gray" onclick="clearWinning()">✕ 초기화</button>
+    </div>
+  </div>
+
+  <!-- 통계 -->
+  <div class="card" id="statsCard" style="display:none">
+    <div class="card-title">📊 이번 회차 통계</div>
+    <div class="stats-grid">
+      <div class="stat-box rank-1"><div class="stat-rank">🥇</div><div class="stat-count" id="s1">0</div><div class="stat-label">1등</div></div>
+      <div class="stat-box rank-2"><div class="stat-rank">🥈</div><div class="stat-count" id="s2">0</div><div class="stat-label">2등</div></div>
+      <div class="stat-box rank-3"><div class="stat-rank">🥉</div><div class="stat-count" id="s3">0</div><div class="stat-label">3등</div></div>
+      <div class="stat-box rank-4"><div class="stat-rank">🎯</div><div class="stat-count" id="s4">0</div><div class="stat-label">4등</div></div>
+      <div class="stat-box rank-5"><div class="stat-rank">🍀</div><div class="stat-count" id="s5">0</div><div class="stat-label">5등</div></div>
+      <div class="stat-box"><div class="stat-rank">📋</div><div class="stat-count" id="s0">0</div><div class="stat-label">낙첨</div></div>
+    </div>
+  </div>
+
+  <!-- 번호 목록 -->
+  <div class="card">
+    <div class="card-title">🎱 저장된 번호 목록</div>
+    <div id="tableArea" class="loading">회차를 선택하세요</div>
+    <div class="count-text" id="countText"></div>
+    <div class="pager" id="pager"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// 회차 계산 유틸
+// 기준: 2026-04-25 = 1221회
+// 토요일 22:00 ~ 다음토요일 17:00 = 해당 다음토요일 회차
+// ============================================================
+var BASE_SAT = new Date('2026-04-25T00:00:00Z'); // UTC 기준 날짜만 사용
+var BASE_ROUND = 1221;
+
+function dateToRound(dateStr) {
+  var d = new Date(dateStr + 'T00:00:00Z');
+  var diffDays = (d - BASE_SAT) / (1000 * 60 * 60 * 24);
+  return BASE_ROUND + Math.round(diffDays / 7);
+}
+
+function roundLabel(dateStr) {
+  var round = dateToRound(dateStr);
+  return round + '회 (' + dateStr + ' 추첨)';
+}
+var SUPABASE_URL = 'https://ygzitmrkhxnzolgcmkpi.supabase.co';
+var SUPABASE_ANON_KEY = 'sb_publishable_CFgXZxJJdlMNGjgXMNv9jQ_JcAm9LQ-';
+var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+var BALL_COLORS = [];
+for(var i=1;i<=45;i++){
+  if(i<=10) BALL_COLORS[i]='#FFD700';
+  else if(i<=20) BALL_COLORS[i]='#00cfff';
+  else if(i<=30) BALL_COLORS[i]='#ff6b6b';
+  else if(i<=40) BALL_COLORS[i]='#7dff8a';
+  else BALL_COLORS[i]='#d580ff';
+}
+
+var currentDraw = '';
+var currentPage = 1;
+var pageSize = 50;
+var allRows = [];
+var winNums = [];
+var winBonus = 0;
+var judged = false;
+
+// ============================================================
+// 초기화
+// ============================================================
+window.onload = function(){
+  loadDrawDates();
+};
+
+// 회차(추첨일) 목록 로드
+async function loadDrawDates(){
+  try{
+    var { data, error } = await sb
+      .from('opick_tickets')
+      .select('draw_date')
+      .order('draw_date', { ascending: false });
+
+    if(error) throw error;
+
+    // 유니크 날짜
+    var dates = [...new Set(data.map(function(r){ return r.draw_date; }))]
+      .sort(function(a,b){ return b.localeCompare(a); });
+    var sel = document.getElementById('drawSelect');
+    sel.innerHTML = '<option value="">회차를 선택하세요...</option>';
+    dates.forEach(function(d){
+      var opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = roundLabel(d);
+      sel.appendChild(opt);
+    });
+    // 기본값: 현재 기준 자동 선택
+    var currentDraw = getCurrentDraw();
+    if(dates.indexOf(currentDraw) >= 0) sel.value = currentDraw;
+    else if(dates.length > 0) sel.value = dates[0];
+    if(sel.value) onDrawChange();
+
+    document.getElementById('totalCount').textContent =
+      '총 ' + data.length.toLocaleString() + '게임 저장됨';
+
+  } catch(e){
+    showToast('❌ 데이터 로드 실패: ' + e.message);
+  }
+}
+
+// 현재 시각 기준 자동 회차 반환
+function getCurrentDraw() {
+  var now = new Date();
+  var kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  var day = kst.getUTCDay();
+  var hour = kst.getUTCHours();
+  var daysUntilSat = (6 - day + 7) % 7;
+  var sat = new Date(kst);
+  sat.setUTCDate(kst.getUTCDate() + daysUntilSat);
+  if (day === 6 && hour >= 22) sat.setUTCDate(sat.getUTCDate() + 7);
+  return sat.toISOString().split('T')[0];
+}
+
+// 회차 변경
+async function onDrawChange(){
+  currentDraw = document.getElementById('drawSelect').value;
+  if(!currentDraw){ document.getElementById('tableArea').innerHTML='<div class="empty">회차를 선택하세요</div>'; return; }
+  judged = false;
+  document.getElementById('statsCard').style.display = 'none';
+  await loadTickets();
+}
+
+// 해당 회차 번호 로드
+async function loadTickets(){
+  document.getElementById('tableArea').innerHTML = '<div class="loading">⏳ 불러오는 중...</div>';
+  try{
+    var { data, error } = await sb
+      .from('opick_tickets')
+      .select('id, numbers, draw_date, client_ip, created_at, result_rank')
+      .eq('draw_date', currentDraw)
+      .order('created_at', { ascending: true });
+
+    if(error) throw error;
+    allRows = data;
+    currentPage = 1;
+    renderTable();
+  } catch(e){
+    showToast('❌ 로드 실패: ' + e.message);
+  }
+}
+
+// 테이블 렌더링
+function renderTable(){
+  var area = document.getElementById('tableArea');
+  if(allRows.length === 0){
+    area.innerHTML = '<div class="empty">저장된 번호가 없습니다</div>';
+    document.getElementById('countText').textContent = '';
+    document.getElementById('pager').innerHTML = '';
+    return;
+  }
+
+  var start = (currentPage-1)*pageSize;
+  var end = Math.min(start+pageSize, allRows.length);
+  var rows = allRows.slice(start, end);
+
+  var html = '<div class="tbl-wrap"><table>';
+  html += '<thead><tr><th>#</th><th>번호</th><th>등수</th><th>IP</th><th>시간</th></tr></thead><tbody>';
+
+  rows.forEach(function(row, i){
+    var nums = row.numbers;
+    var ballsHtml = nums.map(function(n){
+      var matched = judged && winNums.indexOf(n) >= 0;
+      var border = matched ? 'outline:2px solid #fff;' : '';
+      return '<span class="ball" style="background:'+BALL_COLORS[n]+';color:#111;'+border+'">'+n+'</span>';
+    }).join('');
+
+    // 등수 표시
+    var rankHtml = '';
+    if(judged){
+      var rank = calcRank(nums);
+      if(rank===1) rankHtml = '<span class="rank-badge r1">🥇 1등</span>';
+      else if(rank===2) rankHtml = '<span class="rank-badge r2">🥈 2등</span>';
+      else if(rank===3) rankHtml = '<span class="rank-badge r3">🥉 3등</span>';
+      else if(rank===4) rankHtml = '<span class="rank-badge r4">🎯 4등</span>';
+      else if(rank===5) rankHtml = '<span class="rank-badge r5">🍀 5등</span>';
+      else rankHtml = '<span class="rank-badge r0">낙첨</span>';
+    } else {
+      rankHtml = '<span class="rank-badge r0">미판정</span>';
+    }
+
+    var ip = row.client_ip || '-';
+    var time = row.created_at ? row.created_at.replace('T',' ').substring(0,16) : '-';
+
+    html += '<tr>';
+    html += '<td style="color:#4a6080;font-size:12px">'+(start+i+1)+'</td>';
+    html += '<td>'+ballsHtml+'</td>';
+    html += '<td>'+rankHtml+'</td>';
+    html += '<td class="ip-text">'+ip+'</td>';
+    html += '<td class="date-text">'+time+'</td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  area.innerHTML = html;
+
+  document.getElementById('countText').textContent =
+    '총 ' + allRows.length.toLocaleString() + '게임 | ' + start+'~'+end+'번 표시';
+
+  renderPager();
+}
+
+// 페이저
+function renderPager(){
+  var total = Math.ceil(allRows.length / pageSize);
+  var pager = document.getElementById('pager');
+  if(total <= 1){ pager.innerHTML=''; return; }
+  var html = '';
+  for(var i=1;i<=total;i++){
+    html += '<button class="page-btn'+(i===currentPage?' active':'')+'" onclick="goPage('+i+')">'+i+'</button>';
+  }
+  pager.innerHTML = html;
+}
+
+function goPage(n){
+  currentPage = n;
+  renderTable();
+}
+
+// ============================================================
+// 등수 판정
+// ============================================================
+function judgeAll(){
+  var nums = [];
+  for(var i=1;i<=6;i++){
+    var v = parseInt(document.getElementById('w'+i).value);
+    if(isNaN(v)||v<1||v>45){ showToast('⚠️ 당첨번호 '+i+'번을 올바르게 입력하세요 (1~45)'); return; }
+    if(nums.indexOf(v)>=0){ showToast('⚠️ 중복된 번호가 있습니다'); return; }
+    nums.push(v);
+  }
+  var bonus = parseInt(document.getElementById('wb').value);
+  if(isNaN(bonus)||bonus<1||bonus>45){ showToast('⚠️ 보너스 번호를 올바르게 입력하세요'); return; }
+
+  winNums = nums;
+  winBonus = bonus;
+  judged = true;
+
+  // 통계 계산
+  var counts = {0:0,1:0,2:0,3:0,4:0,5:0};
+  allRows.forEach(function(row){
+    var r = calcRank(row.numbers);
+    counts[r]++;
+  });
+
+  document.getElementById('s1').textContent = counts[1].toLocaleString();
+  document.getElementById('s2').textContent = counts[2].toLocaleString();
+  document.getElementById('s3').textContent = counts[3].toLocaleString();
+  document.getElementById('s4').textContent = counts[4].toLocaleString();
+  document.getElementById('s5').textContent = counts[5].toLocaleString();
+  document.getElementById('s0').textContent = counts[0].toLocaleString();
+  document.getElementById('statsCard').style.display = 'block';
+
+  currentPage = 1;
+  renderTable();
+  showToast('✅ 등수 판정 완료!');
+}
+
+function calcRank(nums){
+  if(!winNums.length) return 0;
+  var match = 0;
+  var bonus = false;
+  nums.forEach(function(n){
+    if(winNums.indexOf(n)>=0) match++;
+    if(n===winBonus) bonus=true;
+  });
+  if(match===6) return 1;
+  if(match===5&&bonus) return 2;
+  if(match===5) return 3;
+  if(match===4) return 4;
+  if(match===3) return 5;
+  return 0;
+}
+
+function clearWinning(){
+  for(var i=1;i<=6;i++) document.getElementById('w'+i).value='';
+  document.getElementById('wb').value='';
+  winNums=[];winBonus=0;judged=false;
+  document.getElementById('statsCard').style.display='none';
+  renderTable();
+}
+
+// ============================================================
+// 토스트
+// ============================================================
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+</script>
+</body>
+</html>
