@@ -6,11 +6,113 @@
 <title>🎱 오픽 로또 백오피스(Copyright. 2026)</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
+/* ── 인트로 오버레이 ── */
+#introOverlay{
+  position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;
+  background:radial-gradient(ellipse at 50% 40%,#0d1b3e,#050910);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;overflow:hidden;
+}
+.intro-title{
+  font-size:28px;font-weight:900;color:#fff;
+  text-shadow:0 0 20px #667eea88;
+  margin-bottom:6px;letter-spacing:1px;
+}
+.intro-sub{font-size:13px;color:#4a6080;margin-bottom:32px;}
+
+/* 부유하는 이모지 배경 */
+.floaters{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;}
+.floater{
+  position:absolute;font-size:28px;
+  animation:floatUp linear infinite;
+  opacity:0;
+}
+@keyframes floatUp{
+  0%{transform:translateY(110vh) rotate(0deg);opacity:0}
+  10%{opacity:.7}
+  90%{opacity:.5}
+  100%{transform:translateY(-10vh) rotate(360deg);opacity:0}
+}
+
+/* 로또볼 장식 */
+.deco-balls{
+  display:flex;gap:10px;margin-bottom:32px;
+}
+.deco-ball{
+  width:44px;height:44px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:800;color:#111;
+  animation:bounceBall .8s ease infinite alternate;
+  box-shadow:0 4px 14px #0009;
+}
+@keyframes bounceBall{
+  from{transform:translateY(0)}
+  to{transform:translateY(-10px)}
+}
+
+/* 비밀번호 박스 */
+.pw-box{
+  background:#111827cc;
+  border:1px solid #2a3f60;
+  border-radius:16px;
+  padding:28px 32px;
+  text-align:center;
+  backdrop-filter:blur(10px);
+  min-width:300px;
+  box-shadow:0 8px 32px #0007;
+}
+.pw-label{font-size:13px;color:#94a3b8;margin-bottom:12px;font-weight:600;}
+.pw-wrap{display:flex;gap:8px;margin-bottom:12px;}
+.pw-input{
+  flex:1;background:#1e2d47;border:1px solid #2a3f60;
+  border-radius:8px;color:#fff;font-size:16px;
+  padding:10px 14px;outline:none;letter-spacing:2px;
+}
+.pw-input:focus{border-color:#3b82f6;}
+.pw-btn{
+  padding:10px 18px;background:linear-gradient(135deg,#3b82f6,#6366f1);
+  color:#fff;border:none;border-radius:8px;font-size:14px;
+  font-weight:700;cursor:pointer;transition:all .2s;
+}
+.pw-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px #3b82f644;}
+.pw-error{
+  font-size:12px;color:#ef4444;min-height:18px;
+  transition:opacity .3s;
+}
+.pw-input.shake{animation:shake .4s;}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-8px)}
+  40%{transform:translateX(8px)}
+  60%{transform:translateX(-6px)}
+  80%{transform:translateX(6px)}
+}
+</style>
+
+<!-- 인트로 오버레이 -->
+<div id="introOverlay">
+  <div class="floaters" id="floaters"></div>
+  <div class="intro-title">🎱 오픽 로또 백오피스</div>
+  <div class="intro-sub">관리자 전용 페이지입니다</div>
+  <div class="deco-balls">
+    <div class="deco-ball" style="background:#FFD700;animation-delay:0s">7</div>
+    <div class="deco-ball" style="background:#00cfff;animation-delay:.15s">13</div>
+    <div class="deco-ball" style="background:#ff6b6b;animation-delay:.3s">27</div>
+    <div class="deco-ball" style="background:#7dff8a;animation-delay:.45s">34</div>
+    <div class="deco-ball" style="background:#d580ff;animation-delay:.6s">42</div>
+  </div>
+  <div class="pw-box">
+    <div class="pw-label">🔐 관리자 비밀번호를 입력하세요</div>
+    <div class="pw-wrap">
+      <input class="pw-input" type="password" id="pwInput" placeholder="비밀번호" onkeydown="if(event.key==='Enter')checkPw()">
+      <button class="pw-btn" onclick="checkPw()">입장</button>
+    </div>
+    <div class="pw-error" id="pwError"></div>
+  </div>
+</div>
+
+<style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',sans-serif;background:#0b0f1a;color:#e2e8f0;padding:24px;min-height:100vh}
-.container{max-width:1200px;margin:0 auto}
-h1{font-size:24px;font-weight:900;color:#fff;margin-bottom:4px}
-.sub{font-size:13px;color:#4a6080;margin-bottom:24px}
 
 /* 탭 */
 .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid #1e2d47;padding-bottom:0}
@@ -88,7 +190,7 @@ tr:hover td{background:#131f33}
 <body>
 <div class="container">
   <h1>🎱 오픽 로또 백오피스</h1>
-  <div class="sub">저장된 번호 조회 · 당첨번호 관리 · 등수 판정(ver.2604301534)</div>
+  <div class="sub">저장된 번호 조회 · 당첨번호 관리 · 등수 판정(ver.2604301620)</div>
 
   <!-- 탭 -->
   <div class="tabs">
@@ -259,9 +361,51 @@ function switchTab(id){
 // ============================================================
 var currentDraw='', currentPage=1, pageSize=100, allRows=[], winNums=[], winBonus=0, judged=false;
 
-window.onload=function(){
+// ============================================================
+// 인트로 + 비밀번호
+// ============================================================
+var ADMIN_PW = 'eoqkrskwkdydtjqdk';
+
+// 부유하는 이모지 생성
+function initFloaters(){
+  var items = ['💰','🪙','💵','🎱','🍀','⭐','🎰','🏆','💎','🎊','💫','🎲'];
+  var container = document.getElementById('floaters');
+  for(var i=0;i<18;i++){
+    var el = document.createElement('div');
+    el.className = 'floater';
+    el.textContent = items[i % items.length];
+    el.style.left = (Math.random()*95) + '%';
+    el.style.animationDuration = (6 + Math.random()*8) + 's';
+    el.style.animationDelay = (Math.random()*8) + 's';
+    el.style.fontSize = (20 + Math.random()*20) + 'px';
+    container.appendChild(el);
+  }
+}
+
+function checkPw(){
+  var input = document.getElementById('pwInput');
+  var errEl = document.getElementById('pwError');
+  if(input.value === ADMIN_PW){
+    var overlay = document.getElementById('introOverlay');
+    overlay.style.transition = 'opacity .5s';
+    overlay.style.opacity = '0';
+    setTimeout(function(){ overlay.style.display='none'; }, 500);
+    errEl.textContent = '';
+  } else {
+    errEl.textContent = '❌ 비밀번호가 다릅니다';
+    input.classList.remove('shake');
+    void input.offsetWidth;
+    input.classList.add('shake');
+    input.value = '';
+    setTimeout(function(){ errEl.textContent=''; }, 2000);
+  }
+}
+
+window.onload = function(){
+  initFloaters();
+  // 비밀번호 입력츼 자동 포커스
+  setTimeout(function(){ document.getElementById('pwInput').focus(); }, 100);
   loadDrawDates();
-  // 당첨번호 입력 시 미리보기
   ['w1','w2','w3','w4','w5','w6','wb'].forEach(function(id){
     document.getElementById(id).addEventListener('input', updateWinPreview);
   });
