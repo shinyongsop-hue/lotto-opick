@@ -88,7 +88,7 @@ tr:hover td{background:#131f33}
 <body>
 <div class="container">
   <h1>🎱 오픽 로또 백오피스</h1>
-  <div class="sub">저장된 번호 조회 · 당첨번호 관리 · 등수 판정(ver.2604301518)</div>
+  <div class="sub">저장된 번호 조회 · 당첨번호 관리 · 등수 판정(ver.2604301534)</div>
 
   <!-- 탭 -->
   <div class="tabs">
@@ -451,15 +451,27 @@ function clearWinning(){
 // ============================================================
 // 탭2: 당첨번호 관리
 // ============================================================
-var resultsData=[], resultsPage=1, resultsPageSize=100;
+var resultsData=[], resultsPage=1, resultsPageSize=100, resultsTotalCount=0;
 
 async function loadResults(){
+  resultsPage=1;
+  await fetchResultsPage();
+}
+
+async function fetchResultsPage(){
   document.getElementById('resultsArea').innerHTML='<div class="loading">⏳ 불러오는 중...</div>';
   try{
-    var{data,error}=await sb.from('lotto_results').select('*').order('round',{ascending:false});
+    var from=(resultsPage-1)*resultsPageSize;
+    var to=from+resultsPageSize-1;
+    // count 포함 한 번에 가져오기
+    var{data,error,count}=await sb
+      .from('lotto_results')
+      .select('*',{count:'exact'})
+      .order('round',{ascending:false})
+      .range(from,to);
     if(error) throw error;
     resultsData=data||[];
-    resultsPage=1;
+    resultsTotalCount=count||0;
     renderResults();
   }catch(e){ showToast('❌ 로드 실패: '+e.message); }
 }
@@ -469,11 +481,8 @@ function renderResults(){
   if(!resultsData.length){area.innerHTML='<div class="empty">등록된 당첨번호가 없습니다</div>';
     document.getElementById('resultsCountText').textContent='';
     document.getElementById('resultsPager').innerHTML='';return;}
-  var start=(resultsPage-1)*resultsPageSize;
-  var end=Math.min(start+resultsPageSize,resultsData.length);
-  var pageData=resultsData.slice(start,end);
   var html='';
-  pageData.forEach(function(r){
+  resultsData.forEach(function(r){
     var numsHtml=[r.n1,r.n2,r.n3,r.n4,r.n5,r.n6].map(function(n){
       return '<span class="ball" style="background:'+BALL_COLORS[n]+'">'+n+'</span>';
     }).join('');
@@ -487,9 +496,11 @@ function renderResults(){
     html+='</div>';
   });
   area.innerHTML=html;
-  // 페이징
-  document.getElementById('resultsCountText').textContent='전체 '+resultsData.length.toLocaleString()+'회 | '+(start+1)+'~'+end+'회 표시';
-  var total=Math.ceil(resultsData.length/resultsPageSize);
+  // 페이징 (DB 전체 count 기준)
+  var start=(resultsPage-1)*resultsPageSize+1;
+  var end=Math.min(resultsPage*resultsPageSize, resultsTotalCount);
+  document.getElementById('resultsCountText').textContent='전체 '+resultsTotalCount.toLocaleString()+'회 | '+start+'~'+end+'회 표시';
+  var total=Math.ceil(resultsTotalCount/resultsPageSize);
   var pager=document.getElementById('resultsPager');
   if(total<=1){pager.innerHTML='';return;}
   var ph='';
@@ -497,7 +508,7 @@ function renderResults(){
   pager.innerHTML=ph;
 }
 
-function goResultsPage(n){resultsPage=n;renderResults();}
+function goResultsPage(n){resultsPage=n;fetchResultsPage();}
 
 async function addResult(){
   var round=parseInt(document.getElementById('addRound').value);
