@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎱 오픽 로또 백오피스(copyright. 2026)</title>
+<title>🎱 오픽 로또 백오피스(Copyright. 2026)</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -43,12 +43,12 @@ select:focus,input:focus{border-color:#3b82f6}
 
 /* 통계 */
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
-.stat-box{background:#0f172a;border-radius:10px;padding:12px;text-align:center;border:1px solid #1e2d47}
-.stat-count{font-size:26px;font-weight:900;color:#fff}
-.stat-label{font-size:11px;color:#4a6080;margin-top:2px}
-.r1 .stat-count{color:#FFD700}.r2 .stat-count{color:#C0C0C0}
-.r3 .stat-count{color:#CD7F32}.r4 .stat-count{color:#3b82f6}
-.r5 .stat-count{color:#22c55e}
+.stat-box{background:#0f172a;border-radius:10px;padding:14px;text-align:center;border:1px solid #1e2d47}
+.stat-count{font-size:28px;font-weight:900;color:#fff}
+.stat-label{font-size:13px;font-weight:700;color:#94a3b8;margin-top:4px}
+.sb-r1 .stat-count{color:#FFD700}.sb-r2 .stat-count{color:#C0C0C0}
+.sb-r3 .stat-count{color:#CD7F32}.sb-r4 .stat-count{color:#3b82f6}
+.sb-r5 .stat-count{color:#22c55e}
 
 /* 테이블 */
 .tbl-wrap{overflow-x:auto}
@@ -88,7 +88,7 @@ tr:hover td{background:#131f33}
 <body>
 <div class="container">
   <h1>🎱 오픽 로또 백오피스</h1>
-  <div class="sub">저장된 번호 조회 · 당첨번호 관리 · 등수 판정(Ver. 2604301119)</div>
+  <div class="sub">저장된 번호 조회 · 당첨번호 관리 · 등수 판정(ver.2604301518)</div>
 
   <!-- 탭 -->
   <div class="tabs">
@@ -141,11 +141,11 @@ tr:hover td{background:#131f33}
     <div class="card" id="statsCard" style="display:none">
       <div class="card-title">📊 이번 회차 통계</div>
       <div class="stats-grid">
-        <div class="stat-box r1"><div class="stat-count" id="s1">0</div><div class="stat-label">🥇 1등</div></div>
-        <div class="stat-box r2"><div class="stat-count" id="s2">0</div><div class="stat-label">🥈 2등</div></div>
-        <div class="stat-box r3"><div class="stat-count" id="s3">0</div><div class="stat-label">🥉 3등</div></div>
-        <div class="stat-box r4"><div class="stat-count" id="s4">0</div><div class="stat-label">🎯 4등</div></div>
-        <div class="stat-box r5"><div class="stat-count" id="s5">0</div><div class="stat-label">🍀 5등</div></div>
+        <div class="stat-box sb-r1"><div class="stat-count" id="s1">0</div><div class="stat-label">🥇 1등</div></div>
+        <div class="stat-box sb-r2"><div class="stat-count" id="s2">0</div><div class="stat-label">🥈 2등</div></div>
+        <div class="stat-box sb-r3"><div class="stat-count" id="s3">0</div><div class="stat-label">🥉 3등</div></div>
+        <div class="stat-box sb-r4"><div class="stat-count" id="s4">0</div><div class="stat-label">🎯 4등</div></div>
+        <div class="stat-box sb-r5"><div class="stat-count" id="s5">0</div><div class="stat-label">🍀 5등</div></div>
         <div class="stat-box"><div class="stat-count" id="s0">0</div><div class="stat-label">📋 낙첨</div></div>
       </div>
     </div>
@@ -153,6 +153,7 @@ tr:hover td{background:#131f33}
     <!-- 번호 목록 -->
     <div class="card">
       <div class="card-title">🎱 저장된 번호 목록</div>
+      <div id="challengeCount" style="font-size:13px;color:#60a5fa;font-weight:700;margin-bottom:10px"></div>
       <div id="tableArea" class="loading">회차를 선택하세요</div>
       <div class="count-text" id="countText"></div>
       <div class="pager" id="pager"></div>
@@ -196,6 +197,8 @@ tr:hover td{background:#131f33}
     <div class="card">
       <div class="card-title">📋 저장된 당첨번호 목록</div>
       <div id="resultsArea" class="loading">불러오는 중...</div>
+      <div class="count-text" id="resultsCountText"></div>
+      <div class="pager" id="resultsPager"></div>
     </div>
   </div>
 </div>
@@ -298,7 +301,12 @@ async function loadTickets(){
   try{
     var{data,error}=await sb.from('opick_tickets').select('id,numbers,draw_date,client_ip,created_at,result_rank').eq('draw_date',currentDraw).order('created_at',{ascending:true});
     if(error) throw error;
-    allRows=data; currentPage=1; renderTable();
+    allRows=data; currentPage=1;
+    // 3. 도전번호 총 개수 표시
+    var round=dateToRound(currentDraw);
+    document.getElementById('challengeCount').textContent=
+      '🎯 '+round+'회 도전 번호: 총 '+data.length.toLocaleString()+'게임 (유저 수: '+[...new Set(data.map(function(r){return r.client_ip;}))].length+'명)';
+    renderTable();
   }catch(e){ showToast('❌ 로드 실패: '+e.message); }
 }
 
@@ -443,7 +451,7 @@ function clearWinning(){
 // ============================================================
 // 탭2: 당첨번호 관리
 // ============================================================
-var resultsData=[];
+var resultsData=[], resultsPage=1, resultsPageSize=100;
 
 async function loadResults(){
   document.getElementById('resultsArea').innerHTML='<div class="loading">⏳ 불러오는 중...</div>';
@@ -451,15 +459,21 @@ async function loadResults(){
     var{data,error}=await sb.from('lotto_results').select('*').order('round',{ascending:false});
     if(error) throw error;
     resultsData=data||[];
+    resultsPage=1;
     renderResults();
   }catch(e){ showToast('❌ 로드 실패: '+e.message); }
 }
 
 function renderResults(){
   var area=document.getElementById('resultsArea');
-  if(!resultsData.length){area.innerHTML='<div class="empty">등록된 당첨번호가 없습니다</div>';return;}
+  if(!resultsData.length){area.innerHTML='<div class="empty">등록된 당첨번호가 없습니다</div>';
+    document.getElementById('resultsCountText').textContent='';
+    document.getElementById('resultsPager').innerHTML='';return;}
+  var start=(resultsPage-1)*resultsPageSize;
+  var end=Math.min(start+resultsPageSize,resultsData.length);
+  var pageData=resultsData.slice(start,end);
   var html='';
-  resultsData.forEach(function(r){
+  pageData.forEach(function(r){
     var numsHtml=[r.n1,r.n2,r.n3,r.n4,r.n5,r.n6].map(function(n){
       return '<span class="ball" style="background:'+BALL_COLORS[n]+'">'+n+'</span>';
     }).join('');
@@ -473,7 +487,17 @@ function renderResults(){
     html+='</div>';
   });
   area.innerHTML=html;
+  // 페이징
+  document.getElementById('resultsCountText').textContent='전체 '+resultsData.length.toLocaleString()+'회 | '+(start+1)+'~'+end+'회 표시';
+  var total=Math.ceil(resultsData.length/resultsPageSize);
+  var pager=document.getElementById('resultsPager');
+  if(total<=1){pager.innerHTML='';return;}
+  var ph='';
+  for(var i=1;i<=total;i++) ph+='<button class="pg-btn'+(i===resultsPage?' active':'')+' " onclick="goResultsPage('+i+')">'+i+'</button>';
+  pager.innerHTML=ph;
 }
+
+function goResultsPage(n){resultsPage=n;renderResults();}
 
 async function addResult(){
   var round=parseInt(document.getElementById('addRound').value);
