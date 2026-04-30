@@ -152,7 +152,7 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 <body>
 <div class="container">
 <h1>🎱 오픽 로또</h1>
-<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장(ver.2604301100)</div>
+<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장(ver.2604301105)</div>
 <div class="top-panel">
 <div class="latest-round">
 <div class="round-num" id="latestRoundNum">최신 회차 불러오는 중...</div>
@@ -328,7 +328,7 @@ try{
 var controller=new AbortController();
 var timer=setTimeout(function(){controller.abort();},5000);
 var proxy='https://api.allorigins.win/get?url=';
-var url=encodeURIComponent('https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo='+TOTAL_ROUNDS+');
+var url=encodeURIComponent('https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo='+TOTAL_ROUNDS);
 var response=await fetch(proxy+url,{signal:controller.signal});
 clearTimeout(timer);
 var data=await response.json();
