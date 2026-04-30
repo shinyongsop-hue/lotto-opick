@@ -156,7 +156,7 @@ select:focus,input:focus{border-color:#3b82f6}
 .tbl-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{background:#0f172a;color:#4a6080;font-weight:600;padding:9px 10px;text-align:left;border-bottom:1px solid #1e2d47;white-space:nowrap}
-td{padding:8px 10px;border-bottom:1px solid #1a2540;vertical-align:middle}
+td{padding:8px 10px;border-bottom:1px solid #1a2540;vertical-align:middle;white-space:nowrap}
 tr:hover td{background:#131f33}
 .ball{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-size:11px;font-weight:700;margin:1px;color:#111}
 .rank-badge{display:inline-block;padding:2px 7px;border-radius:8px;font-size:11px;font-weight:700}
@@ -165,6 +165,24 @@ tr:hover td{background:#131f33}
 .r5{background:#22c55e;color:#111}.r0{background:#1e2d47;color:#4a6080}
 .ip-text{font-size:11px;color:#4a6080;font-family:monospace}
 .date-text{font-size:11px;color:#4a6080}
+
+/* 모바일 테이블 */
+@media(max-width:600px){
+  body{padding:12px}
+  .card{padding:14px 10px}
+  table{font-size:12px}
+  th,td{padding:6px 4px}
+  th:nth-child(4),td:nth-child(4){display:none} /* IP 숨김 */
+  .ball{width:22px;height:22px;font-size:10px;margin:1px}
+  .rank-badge{font-size:10px;padding:1px 5px}
+  .date-text{font-size:10px}
+  .num-inputs input{width:40px;height:38px;font-size:14px}
+  .lr-row{grid-template-columns:60px 90px 1fr auto;font-size:12px}
+  .lr-round{font-size:12px}
+  .lr-date{font-size:11px}
+  .stats-grid{grid-template-columns:repeat(3,1fr)}
+  .stat-count{font-size:22px}
+}
 
 /* 페이저 */
 .pager{display:flex;gap:6px;justify-content:center;margin-top:14px;flex-wrap:wrap}
@@ -190,7 +208,7 @@ tr:hover td{background:#131f33}
 <body>
 <div class="container">
   <h1>🎱 오픽 로또 백오피스</h1>
-  <div class="sub">저장된 번호 조회 · 당첨번호 관리 · 등수 판정(ver.2604301620)</div>
+  <div class="sub">저장된 번호 조회 · 당첨번호 관리 · 등수 판정(ver.2604301740)</div>
 
   <!-- 탭 -->
   <div class="tabs">
