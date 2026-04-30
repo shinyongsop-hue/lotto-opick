@@ -168,7 +168,7 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 <body>
 <div class="container">
 <h1>🎱 오픽 로또</h1>
-<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장(ver.2604301535)</div>
+<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장(ver.2604301550)</div>
 <div class="top-panel">
 <div class="latest-round">
 <div id="roundInfoBox" class="round-info-box">
@@ -1115,6 +1115,7 @@ window.onload=function(){
   checkBlockTime();
   _origInit&&_origInit();
   fetchClientIp();
+  initLottoData();
   loadRoundInfoFromDB();
 };
 
@@ -1179,7 +1180,112 @@ async function loadRoundInfoFromDB(){
   }
 }
 
-// 토요일 18:00~20:59 번호 추출 차단
+// ============================================================
+// ✅ lotto_results 캐시 시스템 (localStorage)
+// 유효기간: 24시간. 새 회차 감지 시 자동 갱신
+// ============================================================
+var CACHE_KEY = 'opick_lotto_results';
+var CACHE_TS_KEY = 'opick_lotto_results_ts';
+var CACHE_CNT_KEY = 'opick_lotto_results_cnt';
+var CACHE_TTL = 24 * 60 * 60 * 1000; // 24시간
+
+async function getLottoResultsWithCache(){
+  try{
+    // 1. 캐시 확인
+    var ts = parseInt(localStorage.getItem(CACHE_TS_KEY)||'0');
+    var cached = localStorage.getItem(CACHE_KEY);
+    var cachedCnt = parseInt(localStorage.getItem(CACHE_CNT_KEY)||'0');
+    var now = Date.now();
+
+    // 2. DB에서 전체 개수만 먼저 확인 (경량 쿼리)
+    var sb = getSB();
+    var{count} = await sb.from('lotto_results')
+      .select('*',{count:'exact',head:true});
+    var dbCnt = count || 0;
+
+    // 3. 캐시 유효 조건: 24시간 이내 + DB개수 동일
+    if(cached && (now - ts) < CACHE_TTL && dbCnt === cachedCnt){
+      console.log('📦 localStorage 캐시 사용 (' + cachedCnt + '회)');
+      return JSON.parse(cached);
+    }
+
+    // 4. 캐시 만료 또는 새 회차 감지 → DB에서 전체 로드
+    console.log('🔄 DB에서 lotto_results 로드 중... (' + dbCnt + '회)');
+    var allData = [];
+    var pageSize = 1000;
+    var page = 0;
+    while(true){
+      var from = page * pageSize;
+      var to = from + pageSize - 1;
+      var{data, error} = await sb.from('lotto_results')
+        .select('round,draw_date,n1,n2,n3,n4,n5,n6,bonus')
+        .order('round', {ascending:false})
+        .range(from, to);
+      if(error || !data || data.length === 0) break;
+      allData = allData.concat(data);
+      if(data.length < pageSize) break;
+      page++;
+    }
+
+    // 5. localStorage에 저장
+    try{
+      localStorage.setItem(CACHE_KEY, JSON.stringify(allData));
+      localStorage.setItem(CACHE_TS_KEY, now.toString());
+      localStorage.setItem(CACHE_CNT_KEY, dbCnt.toString());
+      console.log('✅ 캐시 저장 완료 (' + allData.length + '회)');
+    }catch(e){
+      console.log('캐시 저장 실패(용량 초과?):', e);
+    }
+    return allData;
+
+  }catch(e){
+    console.log('getLottoResultsWithCache error:', e);
+    return [];
+  }
+}
+
+// 하드코딩 데이터를 DB 데이터로 교체
+async function initLottoData(){
+  var loadingMsg = document.getElementById('loadingMsg');
+  loadingMsg.className = 'loading-msg loading-dots';
+  loadingMsg.style.display = 'block';
+  loadingMsg.textContent = '회차 데이터 불러오는 중';
+
+  var results = await getLottoResultsWithCache();
+  if(!results || results.length === 0){
+    loadingMsg.textContent = '기본 데이터 사용 (' + TOTAL_ROUNDS + '회)';
+    setTimeout(function(){loadingMsg.style.display='none';}, 2000);
+    return;
+  }
+
+  // HISTORICAL_DRAWS 형식으로 변환 (round 내림차순)
+  results.sort(function(a,b){return b.round - a.round;});
+  HISTORICAL_DRAWS = results.map(function(r){
+    return {n:[r.n1,r.n2,r.n3,r.n4,r.n5,r.n6], b:r.bonus, round:r.round, date:r.draw_date};
+  });
+  TOTAL_ROUNDS = HISTORICAL_DRAWS.length;
+
+  // HISTORICAL_FREQ 재계산
+  var freq = {};
+  for(var i=1;i<=45;i++) freq[i]=0;
+  HISTORICAL_DRAWS.forEach(function(d){
+    d.n.forEach(function(n){ freq[n]++; });
+  });
+  HISTORICAL_FREQ = freq;
+  freqMap = freq;
+
+  // UI 갱신
+  TOTAL_ROUNDS = HISTORICAL_DRAWS.length;
+  document.getElementById('latestRoundNum').textContent = '최신회차 ' + TOTAL_ROUNDS + '회';
+  computeWeights();
+  renderStats();
+
+  loadingMsg.className = 'loading-msg';
+  loadingMsg.textContent = 'DB 데이터 적용완료 (' + TOTAL_ROUNDS + '회)';
+  setTimeout(function(){loadingMsg.style.display='none';}, 2000);
+
+  console.log('✅ lotto_results DB 적용: ' + TOTAL_ROUNDS + '회');
+}
 function checkBlockTime(){
   var now=new Date();
   var kst=new Date(now.getTime()+9*60*60*1000);
