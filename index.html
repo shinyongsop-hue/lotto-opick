@@ -151,7 +151,7 @@ h1{text-align:center;font-size:42px;margin:30px 0 10px;background:linear-gradien
 <body>
 <div class="container">
 <h1>🎱 오픽 로또</h1>
-<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장(ver.2604301051)</div>
+<div class="subtitle">데이터 기반 AI 번호 생성기 by 오픽 쥔장(ver.2604301056)</div>
 <div class="top-panel">
 <div class="latest-round">
 <div class="round-num" id="latestRoundNum">최신 회차 불러오는 중...</div>
@@ -263,7 +263,6 @@ function getRoundByDate(dateStr){
 function getLatestRound(){
   return BASE_ROUND+Math.round((new Date('2026-04-25T00:00:00Z').getTime()-BASE_DATE_MS)/(7*24*3600*1000));
 }
-var TOTAL_ROUNDS=HISTORICAL_DRAWS.length;
 var GROUPS={0:{name:"0그룹",label:"완전랜덤",color:"#ffffff",range:[]},1:{name:"1그룹",label:"1~10",color:"#FFD700",range:[1,2,3,4,5,6,7,8,9,10]},2:{name:"2그룹",label:"11~20",color:"#00cfff",range:[11,12,13,14,15,16,17,18,19,20]},3:{name:"3그룹",label:"21~30",color:"#ff6b6b",range:[21,22,23,24,25,26,27,28,29,30]},4:{name:"4그룹",label:"31~40",color:"#7dff8a",range:[31,32,33,34,35,36,37,38,39,40]},5:{name:"5그룹",label:"41~45",color:"#d580ff",range:[41,42,43,44,45]}};
 var MARBLE_POOL=[1,1,2,2,3,3,4,4,5,0];
 var BALL_COLORS=["#FFD700","#FFD700","#FFD700","#FFD700","#FFD700","#FFD700","#FFD700","#FFD700","#FFD700","#FFD700","#00cfff","#00cfff","#00cfff","#00cfff","#00cfff","#00cfff","#00cfff","#00cfff","#00cfff","#00cfff","#ff6b6b","#ff6b6b","#ff6b6b","#ff6b6b","#ff6b6b","#ff6b6b","#ff6b6b","#ff6b6b","#ff6b6b","#ff6b6b","#7dff8a","#7dff8a","#7dff8a","#7dff8a","#7dff8a","#7dff8a","#7dff8a","#7dff8a","#7dff8a","#7dff8a","#d580ff","#d580ff","#d580ff","#d580ff","#d580ff"];
