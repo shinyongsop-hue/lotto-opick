@@ -15,3 +15,9 @@ index_supabase.html
 *.bat
 GPT_opic_lotto_tooltip_patched.html
 opic_lotto_pattern_updated2.html
+
+# 이미지 소스 파일 (HTML에 base64 내장됨)
+images/
+
+# Claude Code 내부 데이터
+.claude/
