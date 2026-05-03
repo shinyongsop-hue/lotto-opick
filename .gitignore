@@ -1,0 +1,17 @@
+# 민감한 데이터 파일
+SUPABASE_DATA.txt
+HISTORICAL_DRAWS.txt
+
+# 백업 파일
+*_bak*.html
+index_back.html
+index_backup.html
+index_fixed*.html
+index_supabase.html
+*_복사본*
+
+# 기타
+*.py
+*.bat
+GPT_opic_lotto_tooltip_patched.html
+opic_lotto_pattern_updated2.html
