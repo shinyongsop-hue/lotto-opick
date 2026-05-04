@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -212,7 +212,7 @@ tr:hover td{background:#131f33}
 <body>
 <div class="container">
   <h1>🎱 오픽 로또 백오피스</h1>
-  <div class="sub">저장된 번호 조회 · 당첨번호 관리 · 등수 판정(ver.2605011525)</div>
+  <div class="sub">저장된 번호 조회 · 당첨번호 관리 · 등수 판정(ver.2605040908)</div>
 
   <!-- 탭 -->
   <div class="tabs">
@@ -386,7 +386,22 @@ var currentDraw='', currentPage=1, pageSize=100, allRows=[], winNums=[], winBonu
 // ============================================================
 // 인트로 + 비밀번호
 // ============================================================
-var ADMIN_PW = 'eoqkrskwkdydtjqdk';
+// SHA-256 fallback hash (평문 비밀번호 미포함 — 역산 불가)
+// Supabase admin_config 테이블이 있으면 DB에서 가져오고, 없으면 이 값 사용
+var ADMIN_PW_HASH_FALLBACK = '4b409cfee85a78fd4f08a7bcb2e9b6d9ccfe26bcbe67358376e8129aba2b4e28';
+
+async function sha256(str){
+  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+}
+
+async function getStoredHash(){
+  try {
+    var res = await sb.from('admin_config').select('value').eq('key','admin_password_hash').single();
+    if(res.data && res.data.value) return res.data.value;
+  } catch(e){}
+  return ADMIN_PW_HASH_FALLBACK;
+}
 
 // 부유하는 이모지 생성
 function initFloaters(){
@@ -404,22 +419,32 @@ function initFloaters(){
   }
 }
 
-function checkPw(){
+async function checkPw(){
   var input = document.getElementById('pwInput');
   var errEl = document.getElementById('pwError');
-  if(input.value === ADMIN_PW){
-    var overlay = document.getElementById('introOverlay');
-    overlay.style.transition = 'opacity .5s';
-    overlay.style.opacity = '0';
-    setTimeout(function(){ overlay.style.display='none'; }, 500);
-    errEl.textContent = '';
-  } else {
-    errEl.textContent = '❌ 비밀번호가 다릅니다';
-    input.classList.remove('shake');
-    void input.offsetWidth;
-    input.classList.add('shake');
-    input.value = '';
-    setTimeout(function(){ errEl.textContent=''; }, 2000);
+  var btn = document.querySelector('.pw-btn');
+  btn.disabled = true;
+  btn.textContent = '확인중...';
+  try {
+    var inputHash = await sha256(input.value);
+    var storedHash = await getStoredHash();
+    if(inputHash === storedHash){
+      var overlay = document.getElementById('introOverlay');
+      overlay.style.transition = 'opacity .5s';
+      overlay.style.opacity = '0';
+      setTimeout(function(){ overlay.style.display='none'; }, 500);
+      errEl.textContent = '';
+    } else {
+      errEl.textContent = '❌ 비밀번호가 다릅니다';
+      input.classList.remove('shake');
+      void input.offsetWidth;
+      input.classList.add('shake');
+      input.value = '';
+      setTimeout(function(){ errEl.textContent=''; }, 2000);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '입장';
   }
 }
 
